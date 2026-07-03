@@ -6,6 +6,10 @@ The lyrics of whatever you're listening to, written along your route on the map:
 upcoming lyrics ahead of you, the current line highlighted karaoke-style, and behind
 you, greyed out, everything the city has already sung.
 
+## Demo
+
+https://github.com/w3cdotorg/ballade/raw/main/docs/demo.mp4
+
 ## Getting started
 
     npm install
