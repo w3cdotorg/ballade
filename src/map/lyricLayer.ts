@@ -1,25 +1,26 @@
 import type maplibregl from 'maplibre-gl';
-import type { FeatureCollection, LineString } from 'geojson';
-import { stateAtTime, type LyricSegment } from '../sync/timeline';
+import type { FeatureCollection, Point } from 'geojson';
+import { stateAtTime } from '../sync/timeline';
+import type { WordFeature } from './wordLayout';
 
 const SOURCE_ID = 'lyrics';
 const LAYER_ID = 'lyrics-text';
 
-export function segmentsToGeoJSON(segments: LyricSegment[]): FeatureCollection<LineString> {
+export function wordsToGeoJSON(words: WordFeature[]): FeatureCollection<Point> {
   return {
     type: 'FeatureCollection',
-    features: segments.map((s) => ({
+    features: words.map((w) => ({
       type: 'Feature',
-      id: s.id,
-      geometry: { type: 'LineString', coordinates: s.coords },
-      properties: { text: s.text },
+      id: w.id,
+      geometry: { type: 'Point', coordinates: w.lngLat },
+      properties: { text: w.word, rotate: w.rotate },
     })),
   };
 }
 
-/** Ajoute (ou met à jour) la rivière de paroles le long du trajet. */
-export function addLyricLayer(map: maplibregl.Map, segments: LyricSegment[]): void {
-  const data = segmentsToGeoJSON(segments);
+/** Ajoute (ou met à jour) la rivière de paroles le long du trajet, mot à mot. */
+export function addLyricLayer(map: maplibregl.Map, words: WordFeature[]): void {
+  const data = wordsToGeoJSON(words);
   const existing = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
   if (existing) {
     // Re-created features can reuse ids from a previous route; clear their leftover
@@ -34,28 +35,29 @@ export function addLyricLayer(map: maplibregl.Map, segments: LyricSegment[]): vo
     type: 'symbol',
     source: SOURCE_ID,
     layout: {
-      'symbol-placement': 'line-center',
+      // Un point par MOT, orienté le long du chemin (rotation précalculée) : contrairement
+      // au placement line-center, un point s'affiche toujours — l'ancien rendu exigeait
+      // que la ligne entière tienne dans son tronçon à l'écran, ce qui masquait la
+      // plupart des paroles à tous les zooms (cause racine mesurée : fitting, pas collision).
+      'symbol-placement': 'point',
       'text-field': ['get', 'text'],
       'text-font': ['Noto Sans Bold'],
-      'text-size': 15,
-      'text-keep-upright': true,
-      // Dense routes mean MapLibre's default collision detection hides most labels;
-      // lyric visibility matters more here than avoiding overlap.
+      'text-size': ['interpolate', ['linear'], ['zoom'], 13, 9, 15, 13, 17, 16],
+      'text-rotate': ['get', 'rotate'],
+      'text-rotation-alignment': 'map',
+      'text-pitch-alignment': 'map',
       'text-allow-overlap': true,
       'text-ignore-placement': true,
-      // Real routing polylines have small vertex-to-vertex jitter (sidewalk-level noise)
-      // that pushes the cumulative angle well past MapLibre's default 45°, silently
-      // rejecting line-center placement even with overlap allowed. Empirically this was
-      // the dominant cause of near-zero lyric visibility (not collision) — raising the
-      // ceiling is what actually makes labels appear on real streets.
-      'text-max-angle': 150,
+      'text-padding': 0,
     },
     paint: {
-      // past = grisé, current = accent karaoké, future = encre foncée
+      // past = grisé, current = accent karaoké, future = encre foncée.
+      // Le gris doit rester nettement plus sombre que les gris du fond de carte,
+      // sinon les paroles passées deviennent illisibles aux zooms moyens.
       'text-color': [
         'match',
         ['coalesce', ['feature-state', 'state'], 'future'],
-        'past', '#a8adb5',
+        'past', '#7d8595',
         'current', '#e8336d',
         '#1d2b45',
       ],
@@ -72,12 +74,8 @@ export function clearLyricLayer(map: maplibregl.Map): void {
   map.removeFeatureState({ source: SOURCE_ID });
 }
 
-export function updateLyricStates(
-  map: maplibregl.Map,
-  segments: LyricSegment[],
-  t: number,
-): void {
-  for (const seg of segments) {
-    map.setFeatureState({ source: SOURCE_ID, id: seg.id }, { state: stateAtTime(seg, t) });
+export function updateLyricStates(map: maplibregl.Map, words: WordFeature[], t: number): void {
+  for (const w of words) {
+    map.setFeatureState({ source: SOURCE_ID, id: w.id }, { state: stateAtTime(w, t) });
   }
 }

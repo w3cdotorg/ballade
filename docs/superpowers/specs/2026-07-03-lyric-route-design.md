@@ -60,9 +60,14 @@ src/
    chaque ligne de paroles `[tᵢ, tᵢ₊₁]` possède le tronçon `[d(tᵢ), d(tᵢ₊₁)]` où
    `d(t) = longueur_totale × t / durée`. La « vitesse » de déplacement découle de ce
    mapping (arrivée à destination à la dernière note).
-4. `lyricLayer.ts` crée une feature LineString par ligne de paroles (géométrie = son
-   tronçon, propriété `text` = la ligne) et les affiche via une couche `symbol` avec
-   `symbol-placement: line`. Le trait bleu d'itinéraire n'est pas affiché.
+4. `wordLayout.ts` éclate chaque ligne de paroles en mots répartis uniformément le
+   long de son tronçon (un point par mot, orienté selon le cap du chemin, jamais tête
+   en bas) ; `lyricLayer.ts` les affiche via une couche `symbol` en placement point
+   avec affichage forcé. Historique : le placement `line-center` initial exigeait que
+   la ligne entière tienne dans son tronçon à l'écran, ce qui masquait la plupart des
+   paroles à tous les zooms (cause racine mesurée le 2026-07-03 : fitting, pas
+   collision) — d'où le passage au mot-à-mot. Le trait bleu d'itinéraire n'est pas
+   affiché.
 5. Pendant la lecture, `player.ts` émet `currentTime` → `timeline.ts` calcule la
    position courante → la caméra suit en douceur, et chaque feature reçoit son état :
    **à venir** (couleur pleine), **en cours** (surbrillance/halo), **passée** (grisé).
@@ -75,9 +80,9 @@ src/
   naturellement (c'est accepté : l'expérience se vit zoomé, comme convenu).
 - Caméra : suivi fluide du curseur de position (interpolation entre frames,
   `map.jumpTo`/`easeTo` pilotés par requestAnimationFrame), pitch/bearing optionnels.
-- Si une ligne de paroles est trop longue pour son tronçon, MapLibre la masque
-  (comportement collision par défaut) : accepté pour la v1, on verra à l'usage
-  (piste : répéter/tronquer, ou `text-size` adaptatif).
+- Chaque mot s'affiche toujours (`text-allow-overlap` + `text-ignore-placement`),
+  taille du texte interpolée selon le zoom (9 px à z13 → 16 px à z17) ; aux faibles
+  zooms les mots se chevauchent — assumé, l'expérience se vit zoomé.
 
 ## Gestion des erreurs
 

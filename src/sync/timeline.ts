@@ -37,7 +37,7 @@ export function buildSegments(
 
 export type SegState = 'past' | 'current' | 'future';
 
-export function stateAtTime(seg: LyricSegment, t: number): SegState {
+export function stateAtTime(seg: Pick<LyricSegment, 'start' | 'end'>, t: number): SegState {
   if (t >= seg.end) return 'past';
   if (t >= seg.start) return 'current';
   return 'future';

@@ -9,7 +9,8 @@ import { parseLrc } from './lyrics/lrcParser';
 import { parseVtt } from './lyrics/vttParser';
 import { searchLyrics } from './lyrics/lrclib';
 import { readTrackMeta } from './lyrics/metadata';
-import { buildSegments, distanceAtTime, type LyricSegment } from './sync/timeline';
+import { buildSegments, distanceAtTime } from './sync/timeline';
+import { layoutWords, type WordFeature } from './map/wordLayout';
 import { createPlayer } from './sync/player';
 import { getControls } from './ui/controls';
 import type { LyricLine } from './lyrics/types';
@@ -25,7 +26,7 @@ const state: {
   route?: RouteGeometry;
   lyrics?: LyricLine[];
   duration?: number;
-  segments?: LyricSegment[];
+  words?: WordFeature[];
 } = {};
 
 const startMarker = new maplibregl.Marker({ color: '#2563eb' });
@@ -49,17 +50,19 @@ function status(msg: string): void {
 }
 
 const player = createPlayer((t) => {
-  if (!state.route || !state.segments || !state.duration) return;
+  if (!state.route || !state.words || !state.duration) return;
   const pos = pointAt(state.route, distanceAtTime(t, state.duration, state.route.total));
   cursor.setLngLat(pos);
   followPoint(map, pos, zoomFloorArmed ? Math.max(map.getZoom(), TRAVEL_ZOOM) : undefined);
-  updateLyricStates(map, state.segments, t);
+  updateLyricStates(map, state.words, t);
 });
 
 function tryBuildSegments(): void {
   if (!state.route || !state.lyrics || !state.duration) return;
-  state.segments = buildSegments(state.lyrics, state.route, state.duration);
-  const add = () => addLyricLayer(map, state.segments!);
+  state.words = layoutWords(buildSegments(state.lyrics, state.route, state.duration));
+  const add = () => {
+    if (state.words) addLyricLayer(map, state.words);
+  };
   // 'idle' (not 'load') as fallback: isStyleLoaded() can return a transient false after
   // the map has already loaded, in which case 'load' would never fire again.
   if (map.isStyleLoaded()) add();
@@ -106,7 +109,7 @@ c.resetRoute.addEventListener('click', () => {
   // gated on currentTime === 0) instead of resuming mid-song from the old route.
   if (player.audio.src) player.audio.currentTime = 0;
   zoomFloorArmed = true;
-  state.start = state.end = state.route = state.segments = undefined;
+  state.start = state.end = state.route = state.words = undefined;
   startMarker.remove();
   endMarker.remove();
   cursor.remove();
@@ -149,7 +152,7 @@ c.audioFile.addEventListener('change', async () => {
   // enabled (song B would then play over song A's segments). The normal
   // tryBuildSegments paths below re-enable play once new segments are ready.
   state.lyrics = undefined;
-  state.segments = undefined;
+  state.words = undefined;
   c.play.disabled = true;
   clearLyricLayer(map);
   status("Chargement de l'audio…");
