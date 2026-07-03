@@ -179,11 +179,21 @@ c.lyricsFile.addEventListener('change', async () => {
   tryBuildSegments();
 });
 
-c.play.addEventListener('click', () => {
+player.audio.addEventListener('ended', () => {
+  c.play.textContent = '▶ Relancer le voyage';
+});
+
+c.play.addEventListener('click', async () => {
   if (player.audio.paused) {
+    if (player.audio.ended) player.audio.currentTime = 0;
     map.easeTo({ zoom: Math.max(map.getZoom(), 15.5), duration: 800 });
-    player.play();
-    c.play.textContent = '⏸ Pause';
+    try {
+      await player.play();
+      c.play.textContent = '⏸ Pause';
+    } catch (err) {
+      c.play.textContent = '▶ Lancer le voyage';
+      status(`Lecture impossible : ${(err as Error).message}`);
+    }
   } else {
     player.pause();
     c.play.textContent = '▶ Reprendre';

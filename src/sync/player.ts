@@ -1,7 +1,7 @@
 export interface Player {
   /** Charge le fichier et résout avec la durée (secondes). */
   load(file: File): Promise<number>;
-  play(): void;
+  play(): Promise<void>;
   pause(): void;
   readonly audio: HTMLAudioElement;
 }
@@ -26,13 +26,14 @@ export function createPlayer(onTick: (t: number) => void): Player {
   return {
     audio,
     load(file) {
+      if (audio.src.startsWith('blob:')) URL.revokeObjectURL(audio.src);
       audio.src = URL.createObjectURL(file);
       return new Promise((resolve, reject) => {
         audio.onloadedmetadata = () => resolve(audio.duration);
         audio.onerror = () => reject(new Error('Fichier audio illisible'));
       });
     },
-    play: () => void audio.play(),
+    play: () => audio.play(),
     pause: () => audio.pause(),
   };
 }
