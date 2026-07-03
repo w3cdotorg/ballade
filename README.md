@@ -8,7 +8,9 @@ you, greyed out, everything the city has already sung.
 
 ## Demo
 
-https://github.com/w3cdotorg/ballade/raw/main/docs/demo.mp4
+[![Ballade demo — lyrics drawn along a Paris route](docs/demo-preview.gif)](https://github.com/w3cdotorg/ballade/raw/main/docs/demo.mp4)
+
+*Click the preview for the full video (with sound).*
 
 ## Getting started
 
