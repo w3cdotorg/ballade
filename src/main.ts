@@ -71,12 +71,12 @@ function tryBuildSegments(): void {
   else map.once('idle', add);
   cursor.setLngLat(pointAt(state.route, 0)).addTo(map);
   c.play.disabled = false;
-  status('Prêt ! Lance le voyage.');
+  status('Ready! Start the journey.');
 }
 
 async function computeRoute(): Promise<void> {
   if (!state.start || !state.end) return;
-  status("Calcul de l'itinéraire…");
+  status('Calculating the route…');
   try {
     const coords = await fetchRoute(state.start, state.end, c.profile.value as Profile);
     state.route = buildRouteGeometry(coords);
@@ -85,10 +85,10 @@ async function computeRoute(): Promise<void> {
       new maplibregl.LngLatBounds(coords[0], coords[0]),
     );
     map.fitBounds(bounds, { padding: 80 });
-    status(`Itinéraire : ${(state.route.total / 1000).toFixed(1)} km.`);
+    status(`Route: ${(state.route.total / 1000).toFixed(1)} km.`);
     tryBuildSegments();
   } catch (err) {
-    status(`Erreur d'itinéraire : ${(err as Error).message}`);
+    status(`Routing error: ${(err as Error).message}`);
   }
 }
 
@@ -97,7 +97,7 @@ map.on('click', (e) => {
   if (!state.start) {
     state.start = lngLat;
     startMarker.setLngLat(lngLat).addTo(map);
-    status("Départ posé. Clique l'arrivée.");
+    status('Start set. Click the destination.');
   } else if (!state.end) {
     state.end = lngLat;
     endMarker.setLngLat(lngLat).addTo(map);
@@ -117,18 +117,18 @@ c.resetRoute.addEventListener('click', () => {
   cursor.remove();
   clearLyricLayer(map);
   c.play.disabled = true;
-  c.play.textContent = '▶ Lancer le voyage';
-  status('Clique sur la carte : départ, puis arrivée.');
+  c.play.textContent = '▶ Start the journey';
+  status('Click the map: start, then destination.');
 });
 
 function bindSearch(input: HTMLInputElement, which: 'start' | 'end'): void {
   input.addEventListener('keydown', async (e) => {
     if (e.key !== 'Enter' || input.value.trim() === '') return;
-    status("Recherche de l'adresse…");
+    status('Searching for the address…');
     try {
       const results = await geocode(input.value);
       if (results.length === 0) {
-        status('Adresse introuvable.');
+        status('Address not found.');
         return;
       }
       const { label, lngLat } = results[0];
@@ -139,7 +139,7 @@ function bindSearch(input: HTMLInputElement, which: 'start' | 'end'): void {
       if (state.start && state.end) void computeRoute();
       else map.flyTo({ center: lngLat, zoom: 14 });
     } catch (err) {
-      status(`Erreur Nominatim : ${(err as Error).message}`);
+      status(`Nominatim error: ${(err as Error).message}`);
     }
   });
 }
@@ -157,7 +157,7 @@ c.audioFile.addEventListener('change', async () => {
   state.words = undefined;
   c.play.disabled = true;
   clearLyricLayer(map);
-  status("Chargement de l'audio…");
+  status('Loading audio…');
   try {
     state.duration = await player.load(file);
   } catch (err) {
@@ -167,32 +167,32 @@ c.audioFile.addEventListener('change', async () => {
   const meta = await readTrackMeta(file);
   if (meta.artist) c.artist.value = meta.artist;
   if (meta.title) c.title.value = meta.title;
-  status(`Audio chargé (${Math.round(state.duration)} s).`);
+  status(`Audio loaded (${Math.round(state.duration)} s).`);
   if (c.artist.value && c.title.value) void fetchLyricsFromLrclib();
-  else status('Audio chargé. Renseigne artiste + titre, ou fournis un fichier de paroles.');
+  else status('Audio loaded. Fill in artist + title, or provide a lyrics file.');
 });
 
 async function fetchLyricsFromLrclib(): Promise<void> {
   if (!state.duration) {
-    status("Charge d'abord le fichier audio.");
+    status('Load the audio file first.');
     return;
   }
   if (c.artist.value.trim() === '' || c.title.value.trim() === '') {
-    status('Renseigne artiste et titre.');
+    status('Fill in artist and title.');
     return;
   }
-  status('Recherche des paroles sur lrclib…');
+  status('Searching lrclib for lyrics…');
   try {
     const lrc = await searchLyrics(c.artist.value, c.title.value, state.duration);
     if (!lrc) {
-      status('Pas de paroles synchronisées trouvées — fournis un fichier .lrc/.vtt.');
+      status('No synced lyrics found — provide a .lrc/.vtt file.');
       return;
     }
     state.lyrics = parseLrc(lrc, state.duration);
-    status(`${state.lyrics.length} lignes de paroles trouvées.`);
+    status(`${state.lyrics.length} lyric lines found.`);
     tryBuildSegments();
   } catch (err) {
-    status(`Erreur lrclib : ${(err as Error).message}`);
+    status(`lrclib error: ${(err as Error).message}`);
   }
 }
 c.fetchLyrics.addEventListener('click', () => void fetchLyricsFromLrclib());
@@ -201,19 +201,19 @@ c.lyricsFile.addEventListener('change', async () => {
   const file = c.lyricsFile.files?.[0];
   if (!file) return;
   if (!state.duration) {
-    status("Charge d'abord le fichier audio.");
+    status('Load the audio file first.');
     return;
   }
   const text = await file.text();
   state.lyrics = file.name.toLowerCase().endsWith('.lrc')
     ? parseLrc(text, state.duration)
     : parseVtt(text);
-  status(`${state.lyrics.length} lignes de paroles chargées.`);
+  status(`${state.lyrics.length} lyric lines loaded.`);
   tryBuildSegments();
 });
 
 player.audio.addEventListener('ended', () => {
-  c.play.textContent = '▶ Relancer le voyage';
+  c.play.textContent = '▶ Replay the journey';
 });
 
 c.volume.addEventListener('input', () => {
@@ -234,11 +234,11 @@ c.play.addEventListener('click', async () => {
       await player.play();
       c.play.textContent = '⏸ Pause';
     } catch (err) {
-      c.play.textContent = '▶ Lancer le voyage';
-      status(`Lecture impossible : ${(err as Error).message}`);
+      c.play.textContent = '▶ Start the journey';
+      status(`Playback failed: ${(err as Error).message}`);
     }
   } else {
     player.pause();
-    c.play.textContent = '▶ Reprendre';
+    c.play.textContent = '▶ Resume';
   }
 });

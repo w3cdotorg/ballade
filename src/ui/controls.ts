@@ -16,7 +16,7 @@ export interface Controls {
 export function getControls(): Controls {
   const byId = <T extends HTMLElement>(id: string): T => {
     const el = document.getElementById(id);
-    if (!el) throw new Error(`Élément #${id} introuvable dans index.html`);
+    if (!el) throw new Error(`Element #${id} not found in index.html`);
     return el as T;
   };
   return {

@@ -1,11 +1,7 @@
 {
-  "name": "learningshow20_gmaps_fun",
+  "name": "ballade",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs"
-  },
+  "description": "Les paroles de ce que tu écoutes, écrites le long de ton trajet sur la carte.",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",

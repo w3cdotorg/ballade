@@ -33,7 +33,7 @@ export function createPlayer(onTick: (t: number) => void): Player {
       audio.src = URL.createObjectURL(file);
       return new Promise((resolve, reject) => {
         audio.onloadedmetadata = () => resolve(audio.duration);
-        audio.onerror = () => reject(new Error('Fichier audio illisible'));
+        audio.onerror = () => reject(new Error('Unreadable audio file'));
       });
     },
     play: () => audio.play(),

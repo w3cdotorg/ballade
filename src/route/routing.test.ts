@@ -26,12 +26,12 @@ describe('fetchRoute', () => {
       ok: true,
       json: async () => ({ code: 'NoRoute', routes: [] }),
     }));
-    await expect(fetchRoute([0, 0], [1, 1], 'car')).rejects.toThrow('Aucun itinéraire trouvé');
+    await expect(fetchRoute([0, 0], [1, 1], 'car')).rejects.toThrow('No route found');
   });
 
   it('jette une erreur sur statut HTTP non-2xx', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 429 }));
-    await expect(fetchRoute([0, 0], [1, 1], 'bike')).rejects.toThrow('Routage : HTTP 429');
+    await expect(fetchRoute([0, 0], [1, 1], 'bike')).rejects.toThrow('Routing: HTTP 429');
   });
 });
 

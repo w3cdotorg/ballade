@@ -12,9 +12,9 @@ export async function fetchRoute(start: LngLat, end: LngLat, profile: Profile): 
   const pair = `${start[0]},${start[1]};${end[0]},${end[1]}`;
   const url = `https://routing.openstreetmap.de/routed-${profile}/route/v1/driving/${pair}?overview=full&geometries=geojson`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`Routage : HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`Routing: HTTP ${res.status}`);
   const data = (await res.json()) as OsrmResponse;
-  if (data.code !== 'Ok' || !data.routes?.length) throw new Error('Aucun itinéraire trouvé');
+  if (data.code !== 'Ok' || !data.routes?.length) throw new Error('No route found');
   return data.routes[0].geometry.coordinates;
 }
 
@@ -30,7 +30,7 @@ export async function geocode(query: string): Promise<{ label: string; lngLat: L
   url.searchParams.set('format', 'json');
   url.searchParams.set('limit', '5');
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`Nominatim : HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`Nominatim: HTTP ${res.status}`);
   const data = (await res.json()) as NominatimResult[];
   return data.map((r) => ({ label: r.display_name, lngLat: [Number(r.lon), Number(r.lat)] }));
 }

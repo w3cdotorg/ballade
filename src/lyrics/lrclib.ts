@@ -16,7 +16,7 @@ export async function searchLyrics(
   url.searchParams.set('artist_name', artist);
   url.searchParams.set('track_name', title);
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`lrclib : HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`lrclib: HTTP ${res.status}`);
   const hits = (await res.json()) as LrclibHit[];
   const synced = hits.filter((h) => h.syncedLyrics);
   if (synced.length === 0) return null;

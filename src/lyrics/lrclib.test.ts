@@ -29,6 +29,6 @@ describe('searchLyrics', () => {
 
   it('jette une erreur sur statut HTTP non-2xx', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }));
-    await expect(searchLyrics('A', 'B')).rejects.toThrow('lrclib : HTTP 500');
+    await expect(searchLyrics('A', 'B')).rejects.toThrow('lrclib: HTTP 500');
   });
 });

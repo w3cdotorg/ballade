@@ -2,3 +2,5 @@ node_modules/
 dist/
 samples/*.wav
 .DS_Store
+mp3/
+.playwright-mcp/
