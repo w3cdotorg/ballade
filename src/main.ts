@@ -205,8 +205,13 @@ c.volume.addEventListener('input', () => {
 c.play.addEventListener('click', async () => {
   if (player.audio.paused) {
     if (player.audio.ended) player.audio.currentTime = 0;
-    zoomFloorArmed = true;
-    map.easeTo({ zoom: Math.max(map.getZoom(), TRAVEL_ZOOM), duration: 800 });
+    // Only re-arm the zoom floor when starting from the beginning (first play or
+    // replay-after-ended, which seeks to 0 above). Resuming mid-song must not
+    // discard the user's manual zoom choice.
+    if (player.audio.currentTime === 0) {
+      zoomFloorArmed = true;
+      map.easeTo({ zoom: Math.max(map.getZoom(), TRAVEL_ZOOM), duration: 800 });
+    }
     try {
       await player.play();
       c.play.textContent = '⏸ Pause';
