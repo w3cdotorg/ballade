@@ -17,7 +17,8 @@ import type { LyricLine } from './lyrics/types';
 
 // Zoom soutenu pendant le voyage : plus on est près, plus les tronçons sont longs à
 // l'écran et moins les mots d'une même ligne se chevauchent dans les virages.
-const TRAVEL_ZOOM = 17;
+// 19 ≈ niveau rue (~0,18 m/px à Paris), calé sur le rendu préféré de l'utilisateur.
+const TRAVEL_ZOOM = 19;
 
 const c = getControls();
 const map = createMap(document.getElementById('map')!);
