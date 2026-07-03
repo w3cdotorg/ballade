@@ -60,8 +60,10 @@ function tryBuildSegments(): void {
   if (!state.route || !state.lyrics || !state.duration) return;
   state.segments = buildSegments(state.lyrics, state.route, state.duration);
   const add = () => addLyricLayer(map, state.segments!);
+  // 'idle' (not 'load') as fallback: isStyleLoaded() can return a transient false after
+  // the map has already loaded, in which case 'load' would never fire again.
   if (map.isStyleLoaded()) add();
-  else map.once('load', add);
+  else map.once('idle', add);
   cursor.setLngLat(pointAt(state.route, 0)).addTo(map);
   c.play.disabled = false;
   status('Prêt ! Lance le voyage.');
@@ -100,6 +102,9 @@ map.on('click', (e) => {
 
 c.resetRoute.addEventListener('click', () => {
   player.pause();
+  // Rewind so the next play starts at 0 on the new route (re-arms the zoom floor,
+  // gated on currentTime === 0) instead of resuming mid-song from the old route.
+  if (player.audio.src) player.audio.currentTime = 0;
   zoomFloorArmed = true;
   state.start = state.end = state.route = state.segments = undefined;
   startMarker.remove();
@@ -139,6 +144,14 @@ bindSearch(c.searchEnd, 'end');
 c.audioFile.addEventListener('change', async () => {
   const file = c.audioFile.files?.[0];
   if (!file) return;
+  // Invalidate the previous song's lyrics/segments up front: if the new file has no
+  // usable tags or lrclib finds nothing, they must not survive and let play stay
+  // enabled (song B would then play over song A's segments). The normal
+  // tryBuildSegments paths below re-enable play once new segments are ready.
+  state.lyrics = undefined;
+  state.segments = undefined;
+  c.play.disabled = true;
+  clearLyricLayer(map);
   status("Chargement de l'audio…");
   try {
     state.duration = await player.load(file);

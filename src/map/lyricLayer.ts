@@ -22,6 +22,9 @@ export function addLyricLayer(map: maplibregl.Map, segments: LyricSegment[]): vo
   const data = segmentsToGeoJSON(segments);
   const existing = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
   if (existing) {
+    // Re-created features can reuse ids from a previous route; clear their leftover
+    // 'past'/'current' feature-state so they don't render grey/accented before any tick.
+    map.removeFeatureState({ source: SOURCE_ID });
     existing.setData(data);
     return;
   }
@@ -64,7 +67,9 @@ export function addLyricLayer(map: maplibregl.Map, segments: LyricSegment[]): vo
 
 export function clearLyricLayer(map: maplibregl.Map): void {
   const source = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
-  source?.setData({ type: 'FeatureCollection', features: [] });
+  if (!source) return;
+  source.setData({ type: 'FeatureCollection', features: [] });
+  map.removeFeatureState({ source: SOURCE_ID });
 }
 
 export function updateLyricStates(

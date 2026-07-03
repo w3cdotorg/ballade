@@ -26,6 +26,9 @@ export function createPlayer(onTick: (t: number) => void): Player {
   return {
     audio,
     load(file) {
+      // Setting audio.src pauses playback without firing a 'pause' event, so the rAF
+      // tick loop would otherwise keep running (fighting the camera) after a mid-song swap.
+      cancelAnimationFrame(raf);
       if (audio.src.startsWith('blob:')) URL.revokeObjectURL(audio.src);
       audio.src = URL.createObjectURL(file);
       return new Promise((resolve, reject) => {
