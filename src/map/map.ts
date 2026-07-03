@@ -12,6 +12,6 @@ export function createMap(container: HTMLElement): maplibregl.Map {
 }
 
 /** Suivi caméra fluide : petit easeTo linéaire à chaque tick. */
-export function followPoint(map: maplibregl.Map, lngLat: LngLat): void {
-  map.easeTo({ center: lngLat, duration: 250, easing: (t) => t });
+export function followPoint(map: maplibregl.Map, lngLat: LngLat, zoom?: number): void {
+  map.easeTo({ center: lngLat, zoom, duration: 250, easing: (t) => t });
 }

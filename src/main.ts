@@ -14,6 +14,8 @@ import { createPlayer } from './sync/player';
 import { getControls } from './ui/controls';
 import type { LyricLine } from './lyrics/types';
 
+const TRAVEL_ZOOM = 15.5;
+
 const c = getControls();
 const map = createMap(document.getElementById('map')!);
 
@@ -38,7 +40,7 @@ const player = createPlayer((t) => {
   if (!state.route || !state.segments || !state.duration) return;
   const pos = pointAt(state.route, distanceAtTime(t, state.duration, state.route.total));
   cursor.setLngLat(pos);
-  followPoint(map, pos);
+  followPoint(map, pos, Math.max(map.getZoom(), TRAVEL_ZOOM));
   updateLyricStates(map, state.segments, t);
 });
 
@@ -186,7 +188,7 @@ player.audio.addEventListener('ended', () => {
 c.play.addEventListener('click', async () => {
   if (player.audio.paused) {
     if (player.audio.ended) player.audio.currentTime = 0;
-    map.easeTo({ zoom: Math.max(map.getZoom(), 15.5), duration: 800 });
+    map.easeTo({ zoom: Math.max(map.getZoom(), TRAVEL_ZOOM), duration: 800 });
     try {
       await player.play();
       c.play.textContent = '⏸ Pause';
