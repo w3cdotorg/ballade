@@ -13,6 +13,7 @@ import { buildSegments, distanceAtTime, shiftLyrics } from './sync/timeline';
 import { layoutWords, type WordFeature } from './map/wordLayout';
 import { createPlayer } from './sync/player';
 import { getControls } from './ui/controls';
+import { classifyFile } from './ui/fileRouting';
 import type { LyricLine } from './lyrics/types';
 
 // Zoom soutenu pendant le voyage : plus on est près, plus les tronçons sont longs à
@@ -152,16 +153,18 @@ function bindSearch(input: HTMLInputElement, which: 'start' | 'end'): void {
 bindSearch(c.searchStart, 'start');
 bindSearch(c.searchEnd, 'end');
 
-c.audioFile.addEventListener('change', async () => {
-  const file = c.audioFile.files?.[0];
-  if (!file) return;
+async function loadAudioFile(file: File): Promise<void> {
   // Invalidate the previous song's lyrics/segments up front: if the new file has no
   // usable tags or lrclib finds nothing, they must not survive and let play stay
   // enabled (song B would then play over song A's segments). The normal
   // tryBuildSegments paths below re-enable play once new segments are ready.
+  // Artist/title are cleared too, so a tagless file can't silently re-fetch the
+  // previous song's lyrics.
   state.lyrics = undefined;
   state.words = undefined;
   c.play.disabled = true;
+  c.artist.value = '';
+  c.title.value = '';
   clearLyricLayer(map);
   status('Loading audio…');
   try {
@@ -173,9 +176,18 @@ c.audioFile.addEventListener('change', async () => {
   const meta = await readTrackMeta(file);
   if (meta.artist) c.artist.value = meta.artist;
   if (meta.title) c.title.value = meta.title;
-  status(`Audio loaded (${Math.round(state.duration)} s).`);
-  if (c.artist.value && c.title.value) void fetchLyricsFromLrclib();
-  else status('Audio loaded. Fill in artist + title, or provide a lyrics file.');
+  const loaded = `Audio loaded (${Math.round(state.duration)} s).`;
+  if (c.artist.value && c.title.value) {
+    status(loaded);
+    void fetchLyricsFromLrclib();
+  } else {
+    status(`${loaded} Fill in artist + title, or provide a lyrics file.`);
+  }
+}
+
+c.audioFile.addEventListener('change', () => {
+  const file = c.audioFile.files?.[0];
+  if (file) void loadAudioFile(file);
 });
 
 async function fetchLyricsFromLrclib(): Promise<void> {
@@ -211,9 +223,7 @@ async function fetchLyricsFromLrclib(): Promise<void> {
 }
 c.fetchLyrics.addEventListener('click', () => void fetchLyricsFromLrclib());
 
-c.lyricsFile.addEventListener('change', async () => {
-  const file = c.lyricsFile.files?.[0];
-  if (!file) return;
+async function loadLyricsFile(file: File): Promise<void> {
   if (!state.duration) {
     status('Load the audio file first.');
     return;
@@ -224,6 +234,57 @@ c.lyricsFile.addEventListener('change', async () => {
     : parseVtt(text);
   status(`${state.lyrics.length} lyric lines loaded.`);
   tryBuildSegments();
+}
+
+c.lyricsFile.addEventListener('change', () => {
+  const file = c.lyricsFile.files?.[0];
+  if (file) void loadLyricsFile(file);
+});
+
+c.dropzone.addEventListener('click', () => c.audioFile.click());
+c.dropzone.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') c.audioFile.click();
+});
+c.browseAudio.addEventListener('click', (e) => {
+  e.preventDefault();
+  c.audioFile.click();
+});
+c.browseLyrics.addEventListener('click', (e) => {
+  e.preventDefault();
+  c.lyricsFile.click();
+});
+
+// Toute la page est une cible de dépôt : l'overlay apparaît dès qu'un fichier
+// entre dans la fenêtre. dragenter/dragleave se déclenchent sur chaque élément
+// traversé, d'où le compteur de profondeur.
+let dragDepth = 0;
+window.addEventListener('dragenter', (e) => {
+  if (e.dataTransfer?.types.includes('Files')) {
+    dragDepth++;
+    c.dropOverlay.hidden = false;
+  }
+});
+window.addEventListener('dragover', (e) => e.preventDefault());
+window.addEventListener('dragleave', () => {
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (dragDepth === 0) c.dropOverlay.hidden = true;
+});
+window.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dragDepth = 0;
+  c.dropOverlay.hidden = true;
+  const file = e.dataTransfer?.files[0];
+  if (!file) return;
+  switch (classifyFile(file.name, file.type)) {
+    case 'lyrics':
+      void loadLyricsFile(file);
+      break;
+    case 'audio':
+      void loadAudioFile(file);
+      break;
+    default:
+      status(`Unsupported file: ${file.name}`);
+  }
 });
 
 player.audio.addEventListener('ended', () => {

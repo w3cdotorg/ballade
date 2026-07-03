@@ -4,6 +4,10 @@ export interface Controls {
   profile: HTMLSelectElement;
   resetRoute: HTMLButtonElement;
   audioFile: HTMLInputElement;
+  dropzone: HTMLDivElement;
+  dropOverlay: HTMLDivElement;
+  browseAudio: HTMLAnchorElement;
+  browseLyrics: HTMLAnchorElement;
   artist: HTMLInputElement;
   title: HTMLInputElement;
   fetchLyrics: HTMLButtonElement;
@@ -26,6 +30,10 @@ export function getControls(): Controls {
     profile: byId('profile'),
     resetRoute: byId('reset-route'),
     audioFile: byId('audio-file'),
+    dropzone: byId('dropzone'),
+    dropOverlay: byId('drop-overlay'),
+    browseAudio: byId('browse-audio'),
+    browseLyrics: byId('browse-lyrics'),
     artist: byId('artist'),
     title: byId('title'),
     fetchLyrics: byId('fetch-lyrics'),

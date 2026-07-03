@@ -23,13 +23,16 @@
       </section>
       <section>
         <h2>2. Music</h2>
-        <input type="file" id="audio-file" accept="audio/*" />
+        <div id="dropzone" role="button" tabindex="0">
+          🎵 <strong>Drop an audio file</strong> anywhere on the page<br />
+          <span class="hint">works with lyrics files too (.lrc / .vtt / .srt) — or click to browse</span>
+        </div>
+        <p class="hint">Browse: <a href="#" id="browse-audio">audio file</a> · <a href="#" id="browse-lyrics">lyrics file</a></p>
+        <input type="file" id="audio-file" accept="audio/*" hidden />
+        <input type="file" id="lyrics-file" accept=".lrc,.vtt,.srt" hidden />
         <input id="artist" placeholder="Artist" />
         <input id="title" placeholder="Title" />
         <button id="fetch-lyrics">Find lyrics (lrclib)</button>
-        <label class="hint">or a .lrc / .vtt / .srt file:
-          <input type="file" id="lyrics-file" accept=".lrc,.vtt,.srt" />
-        </label>
         <label class="hint">Lyrics offset (s) — increase if lyrics appear too early:
           <input type="number" id="lyrics-offset" step="0.5" value="0" />
         </label>
@@ -41,6 +44,7 @@
         <p id="status" class="hint">Click the map: start, then destination.</p>
       </section>
     </aside>
+    <div id="drop-overlay" hidden>🎵 Drop it — audio or lyrics</div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

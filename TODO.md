@@ -4,9 +4,9 @@
 
 ## UX
 
-- [ ] Replace "Choose file" buttons with drag-and-drop zone (drop audio file anywhere on the page)
-- [ ] Auto-fetch lyrics after file is dropped (no manual button click needed)
-- [ ] Clear artist/title fields when loading a new audio file (prevent re-fetching previous song's lyrics by mistake)
+- [x] Replace "Choose file" buttons with drag-and-drop zone (drop audio file anywhere on the page)
+- [x] Auto-fetch lyrics after file is dropped (no manual button click needed)
+- [x] Clear artist/title fields when loading a new audio file (prevent re-fetching previous song's lyrics by mistake)
 
 ## Map & rendering
 
