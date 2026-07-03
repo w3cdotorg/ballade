@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lyric Route</title>
+  </head>
+  <body>
+    <div id="map"></div>
+    <aside id="panel">
+      <h1>Lyric Route</h1>
+      <section>
+        <h2>1. Trajet</h2>
+        <p class="hint">Clique sur la carte : départ, puis arrivée — ou cherche une adresse.</p>
+        <input id="search-start" placeholder="Adresse de départ (Entrée)" />
+        <input id="search-end" placeholder="Adresse d'arrivée (Entrée)" />
+        <select id="profile">
+          <option value="foot">À pied</option>
+          <option value="bike">À vélo</option>
+          <option value="car">En voiture</option>
+        </select>
+        <button id="reset-route">Réinitialiser le trajet</button>
+      </section>
+      <section>
+        <h2>2. Musique</h2>
+        <input type="file" id="audio-file" accept="audio/*" />
+        <input id="artist" placeholder="Artiste" />
+        <input id="title" placeholder="Titre" />
+        <button id="fetch-lyrics">Chercher les paroles (lrclib)</button>
+        <label class="hint">ou fichier .lrc / .vtt / .srt :
+          <input type="file" id="lyrics-file" accept=".lrc,.vtt,.srt" />
+        </label>
+      </section>
+      <section>
+        <h2>3. Lecture</h2>
+        <button id="play" disabled>▶ Lancer le voyage</button>
+        <p id="status" class="hint">Clique sur la carte : départ, puis arrivée.</p>
+      </section>
+    </aside>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
