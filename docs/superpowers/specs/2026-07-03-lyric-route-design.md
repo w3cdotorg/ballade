@@ -99,6 +99,10 @@ src/
 
 ## Hors scope (phases ultérieures)
 
+- Suggestion de détours par des points d'intérêt (fontaine, parc…) quand la chanson
+  est plus longue que le trajet — pour « remplir » la durée avec du chemin agréable
+  plutôt que d'étirer le mapping (demande utilisateur du 2026-07-03). Piste : POI via
+  Overpass API (OSM), waypoints intermédiaires dans l'appel OSRM.
 - Mode GPS réel (`watchPosition`, projection de la position sur le trajet).
 - Lecture via Apple Music / MusicKit JS.
 - Itinéraires en transports en commun (GTFS).
