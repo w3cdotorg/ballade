@@ -34,9 +34,18 @@ export function addLyricLayer(map: maplibregl.Map, segments: LyricSegment[]): vo
       'symbol-placement': 'line-center',
       'text-field': ['get', 'text'],
       'text-font': ['Noto Sans Bold'],
-      'text-size': 16,
+      'text-size': 15,
       'text-keep-upright': true,
-      'text-allow-overlap': false,
+      // Dense routes mean MapLibre's default collision detection hides most labels;
+      // lyric visibility matters more here than avoiding overlap.
+      'text-allow-overlap': true,
+      'text-ignore-placement': true,
+      // Real routing polylines have small vertex-to-vertex jitter (sidewalk-level noise)
+      // that pushes the cumulative angle well past MapLibre's default 45°, silently
+      // rejecting line-center placement even with overlap allowed. Empirically this was
+      // the dominant cause of near-zero lyric visibility (not collision) — raising the
+      // ceiling is what actually makes labels appear on real streets.
+      'text-max-angle': 150,
     },
     paint: {
       // past = grisé, current = accent karaoké, future = encre foncée

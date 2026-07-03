@@ -32,6 +32,18 @@ const startMarker = new maplibregl.Marker({ color: '#2563eb' });
 const endMarker = new maplibregl.Marker({ color: '#e8336d' });
 const cursor = new maplibregl.Marker({ color: '#111827', scale: 0.8 });
 
+// Zoom floor: while armed, the follow camera forces TRAVEL_ZOOM on every tick so the
+// player converges into the street-level view. Any real user zoom gesture (wheel/pinch/
+// dblclick) disarms it so manual zoom-out sticks; re-armed on play-from-start / reset.
+let zoomFloorArmed = true;
+map.on('wheel', () => {
+  zoomFloorArmed = false;
+});
+map.on('zoomstart', (e) => {
+  // originalEvent present = user gesture; absent = our own easeTo animation.
+  if (e.originalEvent) zoomFloorArmed = false;
+});
+
 function status(msg: string): void {
   c.status.textContent = msg;
 }
@@ -40,7 +52,7 @@ const player = createPlayer((t) => {
   if (!state.route || !state.segments || !state.duration) return;
   const pos = pointAt(state.route, distanceAtTime(t, state.duration, state.route.total));
   cursor.setLngLat(pos);
-  followPoint(map, pos, Math.max(map.getZoom(), TRAVEL_ZOOM));
+  followPoint(map, pos, zoomFloorArmed ? Math.max(map.getZoom(), TRAVEL_ZOOM) : undefined);
   updateLyricStates(map, state.segments, t);
 });
 
@@ -88,6 +100,7 @@ map.on('click', (e) => {
 
 c.resetRoute.addEventListener('click', () => {
   player.pause();
+  zoomFloorArmed = true;
   state.start = state.end = state.route = state.segments = undefined;
   startMarker.remove();
   endMarker.remove();
@@ -185,9 +198,14 @@ player.audio.addEventListener('ended', () => {
   c.play.textContent = '▶ Relancer le voyage';
 });
 
+c.volume.addEventListener('input', () => {
+  player.audio.volume = Number(c.volume.value);
+});
+
 c.play.addEventListener('click', async () => {
   if (player.audio.paused) {
     if (player.audio.ended) player.audio.currentTime = 0;
+    zoomFloorArmed = true;
     map.easeTo({ zoom: Math.max(map.getZoom(), TRAVEL_ZOOM), duration: 800 });
     try {
       await player.play();
