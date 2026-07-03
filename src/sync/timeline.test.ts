@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildRouteGeometry } from '../route/geometry';
-import { buildSegments, distanceAtTime, stateAtTime } from './timeline';
+import { buildSegments, distanceAtTime, shiftLyrics, stateAtTime } from './timeline';
 
 const route = buildRouteGeometry([[0, 0], [2, 0]]);
 const lines = [
@@ -36,5 +36,20 @@ describe('stateAtTime', () => {
     expect(stateAtTime(seg, 10)).toBe('current');
     expect(stateAtTime(seg, 19.9)).toBe('current');
     expect(stateAtTime(seg, 20)).toBe('past');
+  });
+});
+
+describe('shiftLyrics', () => {
+  it('décale start/end de chaque ligne sans muter l’original', () => {
+    const src = [{ start: 2, end: 4, text: 'a' }];
+    const shifted = shiftLyrics(src, 1.5);
+    expect(shifted).toEqual([{ start: 3.5, end: 5.5, text: 'a' }]);
+    expect(src[0].start).toBe(2);
+  });
+
+  it('accepte un décalage négatif', () => {
+    expect(shiftLyrics([{ start: 2, end: 4, text: 'a' }], -3)).toEqual([
+      { start: -1, end: 1, text: 'a' },
+    ]);
   });
 });

@@ -9,7 +9,7 @@ import { parseLrc } from './lyrics/lrcParser';
 import { parseVtt } from './lyrics/vttParser';
 import { searchLyrics } from './lyrics/lrclib';
 import { readTrackMeta } from './lyrics/metadata';
-import { buildSegments, distanceAtTime } from './sync/timeline';
+import { buildSegments, distanceAtTime, shiftLyrics } from './sync/timeline';
 import { layoutWords, type WordFeature } from './map/wordLayout';
 import { createPlayer } from './sync/player';
 import { getControls } from './ui/controls';
@@ -62,7 +62,9 @@ const player = createPlayer((t) => {
 
 function tryBuildSegments(): void {
   if (!state.route || !state.lyrics || !state.duration) return;
-  state.words = layoutWords(buildSegments(state.lyrics, state.route, state.duration));
+  const offset = Number(c.lyricsOffset.value) || 0;
+  const lines = offset === 0 ? state.lyrics : shiftLyrics(state.lyrics, offset);
+  state.words = layoutWords(buildSegments(lines, state.route, state.duration));
   const add = () => {
     if (state.words) addLyricLayer(map, state.words);
   };
@@ -70,9 +72,12 @@ function tryBuildSegments(): void {
   // the map has already loaded, in which case 'load' would never fire again.
   if (map.isStyleLoaded()) add();
   else map.once('idle', add);
-  cursor.setLngLat(pointAt(state.route, 0)).addTo(map);
-  c.play.disabled = false;
-  status('Ready! Start the journey.');
+  const d = distanceAtTime(player.audio.currentTime, state.duration, state.route.total);
+  cursor.setLngLat(pointAt(state.route, d)).addTo(map);
+  if (c.play.disabled) {
+    c.play.disabled = false;
+    status('Ready! Start the journey.');
+  }
 }
 
 async function computeRoute(): Promise<void> {
@@ -184,13 +189,21 @@ async function fetchLyricsFromLrclib(): Promise<void> {
   }
   status('Searching lrclib for lyrics…');
   try {
-    const lrc = await searchLyrics(c.artist.value, c.title.value, state.duration);
-    if (!lrc) {
+    const hit = await searchLyrics(c.artist.value, c.title.value, state.duration);
+    if (!hit) {
       status('No synced lyrics found — provide a .lrc/.vtt file.');
       return;
     }
-    state.lyrics = parseLrc(lrc, state.duration);
-    status(`${state.lyrics.length} lyric lines found.`);
+    state.lyrics = parseLrc(hit.lrc, state.duration);
+    const drift = Math.abs(hit.duration - state.duration);
+    status(
+      `${state.lyrics.length} lyric lines found.` +
+        (drift > 3
+          ? ` ⚠ Synced to a ${Math.round(hit.duration)} s edit (your file: ${Math.round(
+              state.duration,
+            )} s) — adjust the lyrics offset if they drift.`
+          : ''),
+    );
     tryBuildSegments();
   } catch (err) {
     status(`lrclib error: ${(err as Error).message}`);
@@ -219,6 +232,12 @@ player.audio.addEventListener('ended', () => {
 
 c.volume.addEventListener('input', () => {
   player.audio.volume = Number(c.volume.value);
+});
+
+c.lyricsOffset.addEventListener('input', () => {
+  if (!state.lyrics) return;
+  tryBuildSegments();
+  if (state.words) updateLyricStates(map, state.words, player.audio.currentTime);
 });
 
 c.play.addEventListener('click', async () => {

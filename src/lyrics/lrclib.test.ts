@@ -14,9 +14,9 @@ describe('searchLyrics', () => {
       ],
     });
     vi.stubGlobal('fetch', fetchMock);
-    const lrc = await searchLyrics('Artiste', 'Titre', 180);
+    const hit = await searchLyrics('Artiste', 'Titre', 180);
     expect(String(fetchMock.mock.calls[0][0])).toContain('lrclib.net/api/search');
-    expect(lrc).toBe('[00:01.00]Proche');
+    expect(hit).toEqual({ lrc: '[00:01.00]Proche', duration: 182 });
   });
 
   it("renvoie null quand aucun résultat n'a de paroles synchronisées", async () => {

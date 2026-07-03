@@ -5,13 +5,15 @@ interface LrclibHit {
 
 /**
  * Cherche des paroles synchronisées sur lrclib.net.
- * Renvoie le LRC brut du meilleur candidat (durée la plus proche), ou null.
+ * Renvoie le LRC brut et la durée du meilleur candidat (durée la plus proche), ou null.
+ * La durée permet d'avertir quand les paroles sont synchronisées sur un autre
+ * pressage du morceau (l'appelant compare avec la durée réelle du fichier audio).
  */
 export async function searchLyrics(
   artist: string,
   title: string,
   duration?: number,
-): Promise<string | null> {
+): Promise<{ lrc: string; duration: number } | null> {
   const url = new URL('https://lrclib.net/api/search');
   url.searchParams.set('artist_name', artist);
   url.searchParams.set('track_name', title);
@@ -23,5 +25,5 @@ export async function searchLyrics(
   if (duration !== undefined) {
     synced.sort((a, b) => Math.abs(a.duration - duration) - Math.abs(b.duration - duration));
   }
-  return synced[0].syncedLyrics;
+  return { lrc: synced[0].syncedLyrics as string, duration: synced[0].duration };
 }

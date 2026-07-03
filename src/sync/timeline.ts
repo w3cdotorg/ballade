@@ -35,6 +35,14 @@ export function buildSegments(
   }));
 }
 
+/**
+ * Décale toutes les lignes de `offset` secondes (positif = paroles retardées).
+ * Compense les paroles lrclib synchronisées sur un autre pressage du morceau.
+ */
+export function shiftLyrics(lines: LyricLine[], offset: number): LyricLine[] {
+  return lines.map((l) => ({ ...l, start: l.start + offset, end: l.end + offset }));
+}
+
 export type SegState = 'past' | 'current' | 'future';
 
 export function stateAtTime(seg: Pick<LyricSegment, 'start' | 'end'>, t: number): SegState {
