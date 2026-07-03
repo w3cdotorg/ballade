@@ -15,7 +15,9 @@ import { createPlayer } from './sync/player';
 import { getControls } from './ui/controls';
 import type { LyricLine } from './lyrics/types';
 
-const TRAVEL_ZOOM = 15.5;
+// Zoom soutenu pendant le voyage : plus on est près, plus les tronçons sont longs à
+// l'écran et moins les mots d'une même ligne se chevauchent dans les virages.
+const TRAVEL_ZOOM = 17;
 
 const c = getControls();
 const map = createMap(document.getElementById('map')!);
