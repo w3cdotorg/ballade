@@ -28,7 +28,7 @@ const STOPWORDS = new Set([
 export function tokenize(text: string): string[] {
   return text
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .split(/[^a-z]+/)
     .filter((w) => w.length >= 3 && !STOPWORDS.has(w));
