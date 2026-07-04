@@ -7,10 +7,10 @@ interface OsrmResponse {
   routes?: { geometry: { coordinates: LngLat[] } }[];
 }
 
-/** Itinéraire via les serveurs OSRM publics FOSSGIS (ceux d'openstreetmap.org). */
-export async function fetchRoute(start: LngLat, end: LngLat, profile: Profile): Promise<LngLat[]> {
-  const pair = `${start[0]},${start[1]};${end[0]},${end[1]}`;
-  const url = `https://routing.openstreetmap.de/routed-${profile}/route/v1/driving/${pair}?overview=full&geometries=geojson`;
+/** Itinéraire via les serveurs OSRM publics FOSSGIS ; `points` = départ, waypoints, arrivée. */
+export async function fetchRoute(points: LngLat[], profile: Profile): Promise<LngLat[]> {
+  const pairs = points.map((p) => `${p[0]},${p[1]}`).join(';');
+  const url = `https://routing.openstreetmap.de/routed-${profile}/route/v1/driving/${pairs}?overview=full&geometries=geojson`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Routing: HTTP ${res.status}`);
   const data = (await res.json()) as OsrmResponse;

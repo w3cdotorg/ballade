@@ -85,7 +85,7 @@ async function computeRoute(): Promise<void> {
   if (!state.start || !state.end) return;
   status('Calculating the route…');
   try {
-    const coords = await fetchRoute(state.start, state.end, c.profile.value as Profile);
+    const coords = await fetchRoute([state.start, state.end], c.profile.value as Profile);
     state.route = buildRouteGeometry(coords);
     const bounds = coords.reduce(
       (b, p) => b.extend(p),

@@ -13,7 +13,7 @@ describe('fetchRoute', () => {
       }),
     });
     vi.stubGlobal('fetch', fetchMock);
-    const coords = await fetchRoute([2.3, 48.8], [2.4, 48.9], 'foot');
+    const coords = await fetchRoute([[2.3, 48.8], [2.4, 48.9]], 'foot');
     const url = String(fetchMock.mock.calls[0][0]);
     expect(url).toContain('routing.openstreetmap.de/routed-foot/');
     expect(url).toContain('2.3,48.8;2.4,48.9');
@@ -26,12 +26,22 @@ describe('fetchRoute', () => {
       ok: true,
       json: async () => ({ code: 'NoRoute', routes: [] }),
     }));
-    await expect(fetchRoute([0, 0], [1, 1], 'car')).rejects.toThrow('No route found');
+    await expect(fetchRoute([[0, 0], [1, 1]], 'car')).rejects.toThrow('No route found');
   });
 
   it('jette une erreur sur statut HTTP non-2xx', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 429 }));
-    await expect(fetchRoute([0, 0], [1, 1], 'bike')).rejects.toThrow('Routing: HTTP 429');
+    await expect(fetchRoute([[0, 0], [1, 1]], 'bike')).rejects.toThrow('Routing: HTTP 429');
+  });
+
+  it('enchaîne les waypoints intermédiaires dans l\'URL', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ code: 'Ok', routes: [{ geometry: { coordinates: [[0, 0]] } }] }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    await fetchRoute([[2.3, 48.8], [2.35, 48.85], [2.4, 48.9]], 'foot');
+    expect(String(fetchMock.mock.calls[0][0])).toContain('2.3,48.8;2.35,48.85;2.4,48.9');
   });
 });
 
