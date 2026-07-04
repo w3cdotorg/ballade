@@ -31,7 +31,9 @@ extra length. Each POI gets a score:
 2. **Category hint** — lyric keywords mapping to the POI's category
    (water words → water POIs, etc.): +30.
 3. **Fixed priority fallback** — monuments 4 > parks 3 > water 2 > cafés 1.
-4. Minus a penalty proportional to the estimated detour cost.
+4. Plus a small bonus proportional to how much the candidate closes the gap to
+   the target length (the ≤110 % overshoot cap already bounds absurd detours;
+   added length is the goal, not a cost).
 
 Greedy selection: repeatedly insert the best-scoring POI, estimating the new
 route length with chained haversine (waypoints ordered by projection along the
