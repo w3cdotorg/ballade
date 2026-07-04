@@ -147,13 +147,13 @@ async function applyDetour(): Promise<void> {
       status('No interesting detour found nearby.');
       return;
     }
-    const coords = await fetchRoute(
+    const detourRoute = await fetchRoute(
       [state.start, ...waypoints.map((w) => w.lngLat), state.end],
       profile,
     );
     if (state.route !== routeAtStart) return;
     state.directRoute = state.route;
-    state.route = buildRouteGeometry(coords);
+    state.route = buildRouteGeometry(detourRoute.coords, detourRoute.duration);
     state.detourPois = waypoints;
     for (const w of waypoints) {
       detourMarkers.push(
@@ -218,8 +218,8 @@ async function computeRoute(): Promise<void> {
   status('Calculating the route…');
   try {
     clearDetour();
-    const coords = await fetchRoute([state.start, state.end], c.profile.value as Profile);
-    state.route = buildRouteGeometry(coords);
+    const { coords, duration } = await fetchRoute([state.start, state.end], c.profile.value as Profile);
+    state.route = buildRouteGeometry(coords, duration);
     fitRoute();
     status(`Route: ${(state.route.total / 1000).toFixed(1)} km.`);
     tryBuildSegments();

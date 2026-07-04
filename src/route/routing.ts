@@ -4,18 +4,25 @@ export type Profile = 'foot' | 'bike' | 'car';
 
 interface OsrmResponse {
   code: string;
-  routes?: { geometry: { coordinates: LngLat[] } }[];
+  routes?: { duration?: number; geometry: { coordinates: LngLat[] } }[];
+}
+
+export interface FetchedRoute {
+  coords: LngLat[];
+  /** Durée estimée par OSRM (s) ; 0 si absente. */
+  duration: number;
 }
 
 /** Itinéraire via les serveurs OSRM publics FOSSGIS ; `points` = départ, waypoints, arrivée. */
-export async function fetchRoute(points: LngLat[], profile: Profile): Promise<LngLat[]> {
+export async function fetchRoute(points: LngLat[], profile: Profile): Promise<FetchedRoute> {
   const pairs = points.map((p) => `${p[0]},${p[1]}`).join(';');
   const url = `https://routing.openstreetmap.de/routed-${profile}/route/v1/driving/${pairs}?overview=full&geometries=geojson`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Routing: HTTP ${res.status}`);
   const data = (await res.json()) as OsrmResponse;
   if (data.code !== 'Ok' || !data.routes?.length) throw new Error('No route found');
-  return data.routes[0].geometry.coordinates;
+  const route = data.routes[0];
+  return { coords: route.geometry.coordinates, duration: route.duration ?? 0 };
 }
 
 interface NominatimResult {

@@ -9,6 +9,11 @@ describe('buildRouteGeometry', () => {
     expect(r.cumulative[1]).toBeCloseTo(111195, -1);
     expect(r.total).toBeCloseTo(222390, -1);
   });
+
+  it('porte la durée OSRM quand elle est fournie, 0 sinon', () => {
+    expect(buildRouteGeometry([[0, 0], [1, 0]], 350).duration).toBe(350);
+    expect(buildRouteGeometry([[0, 0], [1, 0]]).duration).toBe(0);
+  });
 });
 
 describe('pointAt', () => {

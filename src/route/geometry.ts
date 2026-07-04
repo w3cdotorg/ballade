@@ -7,6 +7,8 @@ export interface RouteGeometry {
   cumulative: number[];
   /** Longueur totale du trajet (m). */
   total: number;
+  /** Durée estimée du trajet (s) ; 0 = inconnue. */
+  duration: number;
 }
 
 const EARTH_RADIUS_M = 6371000;
@@ -22,12 +24,12 @@ export function haversine(a: LngLat, b: LngLat): number {
   return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(h));
 }
 
-export function buildRouteGeometry(coords: LngLat[]): RouteGeometry {
+export function buildRouteGeometry(coords: LngLat[], durationSec = 0): RouteGeometry {
   const cumulative = [0];
   for (let i = 1; i < coords.length; i++) {
     cumulative.push(cumulative[i - 1] + haversine(coords[i - 1], coords[i]));
   }
-  return { coords, cumulative, total: cumulative[cumulative.length - 1] };
+  return { coords, cumulative, total: cumulative[cumulative.length - 1], duration: durationSec };
 }
 
 /** Point situé à `dist` mètres du départ (interpolation linéaire, borné au trajet). */

@@ -4,21 +4,31 @@ import { fetchRoute, geocode } from './routing';
 afterEach(() => vi.unstubAllGlobals());
 
 describe('fetchRoute', () => {
-  it('appelle le bon profil OSRM et renvoie les coordonnées GeoJSON', async () => {
+  it('appelle le bon profil OSRM et renvoie coordonnées GeoJSON + durée', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         code: 'Ok',
-        routes: [{ geometry: { coordinates: [[2.3, 48.8], [2.4, 48.9]] } }],
+        routes: [{ duration: 321, geometry: { coordinates: [[2.3, 48.8], [2.4, 48.9]] } }],
       }),
     });
     vi.stubGlobal('fetch', fetchMock);
-    const coords = await fetchRoute([[2.3, 48.8], [2.4, 48.9]], 'foot');
+    const route = await fetchRoute([[2.3, 48.8], [2.4, 48.9]], 'foot');
     const url = String(fetchMock.mock.calls[0][0]);
     expect(url).toContain('routing.openstreetmap.de/routed-foot/');
     expect(url).toContain('2.3,48.8;2.4,48.9');
     expect(url).toContain('geometries=geojson');
-    expect(coords).toEqual([[2.3, 48.8], [2.4, 48.9]]);
+    expect(route.coords).toEqual([[2.3, 48.8], [2.4, 48.9]]);
+    expect(route.duration).toBe(321);
+  });
+
+  it('durée absente dans la réponse → 0 (fallback géré en aval)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ code: 'Ok', routes: [{ geometry: { coordinates: [[0, 0]] } }] }),
+    }));
+    const route = await fetchRoute([[0, 0], [1, 1]], 'car');
+    expect(route.duration).toBe(0);
   });
 
   it("jette une erreur claire quand OSRM ne trouve pas d'itinéraire", async () => {
