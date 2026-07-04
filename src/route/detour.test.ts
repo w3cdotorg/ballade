@@ -34,19 +34,19 @@ describe('averageSpeed', () => {
 });
 
 describe('targetLength / needsDetour', () => {
-  it('cible = durée × vitesse du profil (à pied 1,3 m/s)', () => {
-    expect(targetLength(300, 'foot')).toBeCloseTo(390);
+  it('cible = durée × vitesse', () => {
+    expect(targetLength(300, 1.3)).toBeCloseTo(390);
   });
 
   it('détour proposé quand la chanson dépasse la durée du trajet de 20 %', () => {
-    // 1000 m à pied ≈ 769 s ; seuil ×1,2 ≈ 923 s.
-    expect(needsDetour(1000, 1000, 'foot')).toBe(true);
-    expect(needsDetour(1000, 900, 'foot')).toBe(false);
+    // 1000 m à 1,3 m/s ≈ 769 s ; seuil ×1,2 ≈ 923 s.
+    expect(needsDetour(1000, 1000, 1.3)).toBe(true);
+    expect(needsDetour(1000, 900, 1.3)).toBe(false);
   });
 
-  it('tient compte du profil (en voiture le même trajet est vite avalé)', () => {
-    expect(needsDetour(10000, 1000, 'car')).toBe(false);
-    expect(needsDetour(10000, 1200, 'car')).toBe(true);
+  it('tient compte de la vitesse (plus on va vite, plus il faut de chanson)', () => {
+    expect(needsDetour(10000, 1000, 11.1)).toBe(false);
+    expect(needsDetour(10000, 1200, 11.1)).toBe(true);
   });
 });
 

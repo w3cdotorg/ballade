@@ -13,7 +13,6 @@ import {
   detourMargin,
   needsDetour,
   selectWaypoints,
-  SPEED_MPS,
   targetLength,
   type Poi,
 } from './route/detour';
@@ -27,6 +26,7 @@ import { layoutWords, type WordFeature } from './map/wordLayout';
 import { createPlayer } from './sync/player';
 import { getControls } from './ui/controls';
 import { classifyFile } from './ui/fileRouting';
+import { formatDuration } from './ui/format';
 import type { LyricLine } from './lyrics/types';
 
 // Zoom soutenu pendant le voyage : plus on est près, plus les tronçons sont longs à
@@ -49,6 +49,12 @@ const state: {
   /** Trajet direct sauvegardé pour « Remove detour ». */
   directRoute?: RouteGeometry;
 } = {};
+
+/** Durée estimée (s) du trajet courant à vitesse réaliste. */
+function travelSeconds(): number {
+  if (!state.route) return 0;
+  return state.route.total / averageSpeed(state.route, c.profile.value as Profile);
+}
 
 const startMarker = new maplibregl.Marker({ color: '#2563eb' });
 const endMarker = new maplibregl.Marker({ color: '#e8336d' });
@@ -91,19 +97,19 @@ function clearDetour(): void {
   c.detour.disabled = false;
 }
 
-// Le bouton n'apparaît que si la chanson dépasse nettement la durée estimée du trajet.
 function updateDetourOffer(): void {
   if (state.detourPois) return; // détour appliqué : le bouton affiche déjà « Remove »
-  const profile = c.profile.value as Profile;
-  const offer =
-    state.route !== undefined &&
-    state.duration !== undefined &&
-    needsDetour(state.route.total, state.duration, profile);
+  if (!state.route || state.duration === undefined) {
+    c.detour.hidden = true;
+    return;
+  }
+  const speed = averageSpeed(state.route, c.profile.value as Profile);
+  const offer = needsDetour(state.route.total, state.duration, speed);
   const wasHidden = c.detour.hidden;
   c.detour.hidden = !offer;
-  if (offer && wasHidden && state.route && state.duration) {
-    const extraMin = (state.duration - state.route.total / SPEED_MPS[profile]) / 60;
-    status(`The song outlasts the trip by ~${Math.max(1, Math.round(extraMin))} min — add a scenic detour?`);
+  if (offer && wasHidden) {
+    const extra = state.duration - travelSeconds();
+    status(`The song outlasts the trip by ~${formatDuration(extra)} — add a scenic detour?`);
   }
 }
 
@@ -122,7 +128,7 @@ async function applyDetour(): Promise<void> {
   // Si le trajet change pendant les requêtes (reset, nouvelle adresse), ce détour est périmé.
   const routeAtStart = state.route;
   const profile = c.profile.value as Profile;
-  const target = targetLength(state.duration, profile);
+  const target = targetLength(state.duration, averageSpeed(state.route, profile));
   c.detour.disabled = true;
   status('Searching for a scenic detour…');
   try {
@@ -183,7 +189,7 @@ function removeDetour(): void {
   fitRoute();
   tryBuildSegments();
   updateDetourOffer();
-  status(`Route: ${(state.route.total / 1000).toFixed(1)} km.`);
+  status(`Route: ${(state.route.total / 1000).toFixed(1)} km · ~${formatDuration(travelSeconds())}.`);
 }
 
 c.detour.addEventListener('click', () => {
@@ -224,7 +230,7 @@ async function computeRoute(): Promise<void> {
     const { coords, duration } = await fetchRoute([state.start, state.end], c.profile.value as Profile);
     state.route = buildRouteGeometry(coords, duration);
     fitRoute();
-    status(`Route: ${(state.route.total / 1000).toFixed(1)} km.`);
+    status(`Route: ${(state.route.total / 1000).toFixed(1)} km · ~${formatDuration(travelSeconds())}.`);
     tryBuildSegments();
     updateDetourOffer();
   } catch (err) {

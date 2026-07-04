@@ -21,13 +21,13 @@ export function averageSpeed(route: RouteGeometry, profile: Profile): number {
 // On ne propose un détour que si la chanson dépasse la durée estimée du trajet de 20 %.
 const DETOUR_RATIO = 1.2;
 
-/** Longueur de trajet (m) qui occuperait toute la chanson au rythme du profil. */
-export function targetLength(durationSec: number, profile: Profile): number {
-  return durationSec * SPEED_MPS[profile];
+/** Longueur de trajet (m) qui occuperait toute la chanson à la vitesse donnée. */
+export function targetLength(durationSec: number, speedMps: number): number {
+  return durationSec * speedMps;
 }
 
-export function needsDetour(routeTotal: number, durationSec: number, profile: Profile): boolean {
-  return targetLength(durationSec, profile) > routeTotal * DETOUR_RATIO;
+export function needsDetour(routeTotal: number, durationSec: number, speedMps: number): boolean {
+  return targetLength(durationSec, speedMps) > routeTotal * DETOUR_RATIO;
 }
 
 // Lexique thématique FR/EN (formes normalisées, sans accents) : mots de paroles → catégorie.
