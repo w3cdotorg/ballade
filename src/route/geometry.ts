@@ -11,7 +11,7 @@ export interface RouteGeometry {
 
 const EARTH_RADIUS_M = 6371000;
 
-function haversine(a: LngLat, b: LngLat): number {
+export function haversine(a: LngLat, b: LngLat): number {
   const toRad = (deg: number) => (deg * Math.PI) / 180;
   const dLat = toRad(b[1] - a[1]);
   const dLng = toRad(b[0] - a[0]);

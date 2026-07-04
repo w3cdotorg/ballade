@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildRouteGeometry, pointAt, sliceRoute } from './geometry';
+import { buildRouteGeometry, pointAt, sliceRoute, haversine } from './geometry';
 
 // À l'équateur, 1° de longitude ≈ 111 195 m (haversine, R = 6 371 km).
 describe('buildRouteGeometry', () => {
@@ -32,5 +32,15 @@ describe('sliceRoute', () => {
     expect(s[0][0]).toBeCloseTo(0.5, 5);
     expect(s[1][0]).toBeCloseTo(1, 5);
     expect(s[2][0]).toBeCloseTo(1.5, 5);
+  });
+});
+
+describe('haversine', () => {
+  it('mesure ~111,2 km pour 1° de latitude', () => {
+    expect(haversine([0, 0], [0, 1])).toBeCloseTo(111195, -2);
+  });
+
+  it('vaut 0 pour deux points identiques', () => {
+    expect(haversine([2.35, 48.85], [2.35, 48.85])).toBe(0);
   });
 });
