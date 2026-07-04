@@ -66,7 +66,8 @@ caméra, états des paroles) :
 La projection temps→distance devient `d(T) = min(v × T, total)` avec
 `v = total / duration` porté par `RouteGeometry`. `buildSegments` découpe les
 tronçons de paroles avec cette projection. Signature : `distanceAtTime(t,
-route)` (la route porte total et durée).
+speedMps, total)` — la vitesse est passée explicitement pour que le fallback
+`SPEED_MPS[profile]` (qui exige le profil) reste au call site.
 
 ### `route/detour.ts`
 
