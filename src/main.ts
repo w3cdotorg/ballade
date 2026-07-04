@@ -24,6 +24,7 @@ import { readTrackMeta } from './lyrics/metadata';
 import { buildSegments, distanceAtTime, shiftLyrics } from './sync/timeline';
 import { layoutWords, type WordFeature } from './map/wordLayout';
 import { createPlayer } from './sync/player';
+import { startSilentJourney, type SilentJourney } from './sync/journeyClock';
 import { getControls } from './ui/controls';
 import { classifyFile } from './ui/fileRouting';
 import { formatDuration } from './ui/format';
@@ -50,10 +51,46 @@ const state: {
   directRoute?: RouteGeometry;
 } = {};
 
+/** Phase silencieuse en cours (chanson finie, voyage pas terminé). */
+let silentJourney: SilentJourney | undefined;
+/** Dernier temps de voyage rendu (s) — audio.currentTime pendant la lecture. */
+let journeyT = 0;
+
 /** Durée estimée (s) du trajet courant à vitesse réaliste. */
 function travelSeconds(): number {
   if (!state.route) return 0;
   return state.route.total / averageSpeed(state.route, c.profile.value as Profile);
+}
+
+function stopSilentJourney(): void {
+  silentJourney?.cancel();
+  silentJourney = undefined;
+}
+
+function arrive(): void {
+  c.play.textContent = '▶ Replay the journey';
+  status('Arrived!');
+}
+
+/** Démarre (ou reprend) la progression silencieuse depuis `from` secondes. */
+function startSilentPhase(from: number): void {
+  stopSilentJourney();
+  const until = travelSeconds();
+  if (from >= until) {
+    arrive();
+    return;
+  }
+  status(`Music over — the journey continues in silence (~${formatDuration(until - from)} to go).`);
+  c.play.textContent = '⏸ Pause';
+  silentJourney = startSilentJourney(from, until, renderAt, () => {
+    silentJourney = undefined;
+    arrive();
+  });
+}
+
+/** Un changement de route ou de profil modifie la vitesse : recale la phase silencieuse. */
+function resyncSilentPhase(): void {
+  if (silentJourney) startSilentPhase(journeyT);
 }
 
 const startMarker = new maplibregl.Marker({ color: '#2563eb' });
@@ -76,14 +113,17 @@ function status(msg: string): void {
   c.status.textContent = msg;
 }
 
-const player = createPlayer((t) => {
+function renderAt(t: number): void {
   if (!state.route || !state.words) return;
+  journeyT = t;
   const speed = averageSpeed(state.route, c.profile.value as Profile);
   const pos = pointAt(state.route, distanceAtTime(t, speed, state.route.total));
   cursor.setLngLat(pos);
   followPoint(map, pos, zoomFloorArmed ? Math.max(map.getZoom(), TRAVEL_ZOOM) : undefined);
   updateLyricStates(map, state.words, t);
-});
+}
+
+const player = createPlayer(renderAt);
 
 const detourMarkers: maplibregl.Marker[] = [];
 
@@ -175,6 +215,7 @@ async function applyDetour(): Promise<void> {
     status(`Detour via ${names} (+${addedKm.toFixed(1)} km).`);
     c.detour.textContent = '✕ Remove detour';
     c.detour.hidden = false;
+    resyncSilentPhase();
   } catch (err) {
     status(`Detour error: ${(err as Error).message}`);
   } finally {
@@ -190,6 +231,7 @@ function removeDetour(): void {
   tryBuildSegments();
   updateDetourOffer();
   status(`Route: ${(state.route.total / 1000).toFixed(1)} km · ~${formatDuration(travelSeconds())}.`);
+  resyncSilentPhase();
 }
 
 c.detour.addEventListener('click', () => {
@@ -199,7 +241,10 @@ c.detour.addEventListener('click', () => {
 
 // Le seuil de détour dépend de la vitesse du profil : le bouton doit se mettre à jour
 // si l'utilisateur change de mode de transport après avoir chargé trajet + audio.
-c.profile.addEventListener('change', updateDetourOffer);
+c.profile.addEventListener('change', () => {
+  updateDetourOffer();
+  resyncSilentPhase();
+});
 
 function tryBuildSegments(): void {
   if (!state.route || !state.lyrics || !state.duration) return;
@@ -214,7 +259,7 @@ function tryBuildSegments(): void {
   // the map has already loaded, in which case 'load' would never fire again.
   if (map.isStyleLoaded()) add();
   else map.once('idle', add);
-  const d = distanceAtTime(player.audio.currentTime, speed, state.route.total);
+  const d = distanceAtTime(journeyT, speed, state.route.total);
   cursor.setLngLat(pointAt(state.route, d)).addTo(map);
   if (c.play.disabled) {
     c.play.disabled = false;
@@ -233,6 +278,7 @@ async function computeRoute(): Promise<void> {
     status(`Route: ${(state.route.total / 1000).toFixed(1)} km · ~${formatDuration(travelSeconds())}.`);
     tryBuildSegments();
     updateDetourOffer();
+    resyncSilentPhase();
   } catch (err) {
     status(`Routing error: ${(err as Error).message}`);
   }
@@ -253,6 +299,8 @@ map.on('click', (e) => {
 
 c.resetRoute.addEventListener('click', () => {
   player.pause();
+  stopSilentJourney();
+  journeyT = 0;
   // Rewind so the next play starts at 0 on the new route (re-arms the zoom floor,
   // gated on currentTime === 0) instead of resuming mid-song from the old route.
   if (player.audio.src) player.audio.currentTime = 0;
@@ -300,6 +348,8 @@ async function loadAudioFile(file: File): Promise<void> {
   // tryBuildSegments paths below re-enable play once new segments are ready.
   // Artist/title are cleared too, so a tagless file can't silently re-fetch the
   // previous song's lyrics.
+  stopSilentJourney();
+  journeyT = 0;
   state.lyrics = undefined;
   state.words = undefined;
   c.play.disabled = true;
@@ -429,7 +479,9 @@ window.addEventListener('drop', (e) => {
 });
 
 player.audio.addEventListener('ended', () => {
-  c.play.textContent = '▶ Replay the journey';
+  // player.ts a déjà émis onTick(audio.duration) : journeyT est à jour.
+  if (journeyT < travelSeconds()) startSilentPhase(journeyT);
+  else arrive();
 });
 
 c.volume.addEventListener('input', () => {
@@ -443,6 +495,17 @@ c.lyricsOffset.addEventListener('input', () => {
 });
 
 c.play.addEventListener('click', async () => {
+  // Phase silencieuse en cours : le bouton met le voyage en pause.
+  if (silentJourney) {
+    stopSilentJourney();
+    c.play.textContent = '▶ Resume';
+    return;
+  }
+  // Phase silencieuse en pause : reprise (la musique, elle, est finie).
+  if (player.audio.ended && journeyT < travelSeconds()) {
+    startSilentPhase(journeyT);
+    return;
+  }
   if (player.audio.paused) {
     if (player.audio.ended) player.audio.currentTime = 0;
     // Only re-arm the zoom floor when starting from the beginning (first play or
