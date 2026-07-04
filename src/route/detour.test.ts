@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  averageSpeed,
   categoryHints,
   corridorBbox,
   detourMargin,
@@ -9,9 +10,28 @@ import {
   targetLength,
   type Poi,
 } from './detour';
+import type { RouteGeometry } from './geometry';
 
 const none = new Set<string>();
 const noHints = new Set<never>();
+
+describe('averageSpeed', () => {
+  const route = (total: number, duration: number): RouteGeometry => ({
+    coords: [],
+    cumulative: [],
+    total,
+    duration,
+  });
+
+  it('durée OSRM disponible : vitesse = distance / durée', () => {
+    expect(averageSpeed(route(5000, 500), 'foot')).toBe(10);
+  });
+
+  it('durée absente ou nulle : fallback sur la vitesse forfaitaire du profil', () => {
+    expect(averageSpeed(route(5000, 0), 'foot')).toBeCloseTo(1.3);
+    expect(averageSpeed(route(5000, 0), 'car')).toBeCloseTo(11.1);
+  });
+});
 
 describe('targetLength / needsDetour', () => {
   it('cible = durée × vitesse du profil (à pied 1,3 m/s)', () => {

@@ -7,20 +7,20 @@ export interface LyricSegment {
   /** Début/fin de la ligne dans l'audio, en secondes. */
   start: number;
   end: number;
-  /** Tronçon du trajet « possédé » par cette ligne. */
+  /** Tronçon du trajet parcouru pendant la ligne. */
   coords: LngLat[];
 }
 
-/** Projette la durée du morceau sur la longueur du trajet : d(t) = total × t / duration. */
-export function distanceAtTime(t: number, duration: number, total: number): number {
-  if (duration <= 0) return 0;
-  return Math.min(Math.max(t / duration, 0), 1) * total;
+/** Distance parcourue à vitesse constante : d(t) = clamp(v × t, 0, total). */
+export function distanceAtTime(t: number, speedMps: number, total: number): number {
+  if (speedMps <= 0) return 0;
+  return Math.min(Math.max(t * speedMps, 0), total);
 }
 
 export function buildSegments(
   lines: LyricLine[],
   route: RouteGeometry,
-  duration: number,
+  speedMps: number,
 ): LyricSegment[] {
   return lines.map((line, id) => ({
     id,
@@ -29,8 +29,8 @@ export function buildSegments(
     end: line.end,
     coords: sliceRoute(
       route,
-      distanceAtTime(line.start, duration, route.total),
-      distanceAtTime(line.end, duration, route.total),
+      distanceAtTime(line.start, speedMps, route.total),
+      distanceAtTime(line.end, speedMps, route.total),
     ),
   }));
 }

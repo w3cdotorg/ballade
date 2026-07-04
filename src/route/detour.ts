@@ -1,5 +1,4 @@
-import type { LngLat } from './geometry';
-import { haversine } from './geometry';
+import { haversine, type LngLat, type RouteGeometry } from './geometry';
 import type { Profile } from './routing';
 import { tokenize } from '../lyrics/keywords';
 
@@ -11,8 +10,13 @@ export interface Poi {
   category: PoiCategory;
 }
 
-/** Vitesses de référence par profil (m/s), pour estimer la durée du trajet. */
+/** Vitesses de référence par profil (m/s), fallback quand OSRM ne fournit pas de durée. */
 export const SPEED_MPS: Record<Profile, number> = { foot: 1.3, bike: 4.2, car: 11.1 };
+
+/** Vitesse moyenne du trajet (m/s) : durée OSRM si disponible, sinon forfait du profil. */
+export function averageSpeed(route: RouteGeometry, profile: Profile): number {
+  return route.duration > 0 ? route.total / route.duration : SPEED_MPS[profile];
+}
 
 // On ne propose un détour que si la chanson dépasse la durée estimée du trajet de 20 %.
 const DETOUR_RATIO = 1.2;

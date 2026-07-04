@@ -7,6 +7,7 @@ import { fetchRoute, geocode, type Profile } from './route/routing';
 import { buildRouteGeometry, pointAt, type LngLat, type RouteGeometry } from './route/geometry';
 import { fetchPois } from './route/overpass';
 import {
+  averageSpeed,
   categoryHints,
   corridorBbox,
   detourMargin,
@@ -70,8 +71,9 @@ function status(msg: string): void {
 }
 
 const player = createPlayer((t) => {
-  if (!state.route || !state.words || !state.duration) return;
-  const pos = pointAt(state.route, distanceAtTime(t, state.duration, state.route.total));
+  if (!state.route || !state.words) return;
+  const speed = averageSpeed(state.route, c.profile.value as Profile);
+  const pos = pointAt(state.route, distanceAtTime(t, speed, state.route.total));
   cursor.setLngLat(pos);
   followPoint(map, pos, zoomFloorArmed ? Math.max(map.getZoom(), TRAVEL_ZOOM) : undefined);
   updateLyricStates(map, state.words, t);
@@ -197,7 +199,8 @@ function tryBuildSegments(): void {
   if (!state.route || !state.lyrics || !state.duration) return;
   const offset = Number(c.lyricsOffset.value) || 0;
   const lines = offset === 0 ? state.lyrics : shiftLyrics(state.lyrics, offset);
-  state.words = layoutWords(buildSegments(lines, state.route, state.duration));
+  const speed = averageSpeed(state.route, c.profile.value as Profile);
+  state.words = layoutWords(buildSegments(lines, state.route, speed));
   const add = () => {
     if (state.words) addLyricLayer(map, state.words);
   };
@@ -205,7 +208,7 @@ function tryBuildSegments(): void {
   // the map has already loaded, in which case 'load' would never fire again.
   if (map.isStyleLoaded()) add();
   else map.once('idle', add);
-  const d = distanceAtTime(player.audio.currentTime, state.duration, state.route.total);
+  const d = distanceAtTime(player.audio.currentTime, speed, state.route.total);
   cursor.setLngLat(pointAt(state.route, d)).addTo(map);
   if (c.play.disabled) {
     c.play.disabled = false;

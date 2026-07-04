@@ -8,9 +8,19 @@ const lines = [
   { start: 10, end: 20, text: 'seconde moitié' },
 ];
 
+describe('distanceAtTime', () => {
+  it('avance à vitesse constante, bornée au trajet', () => {
+    expect(distanceAtTime(10, 50, 1000)).toBe(500);
+    expect(distanceAtTime(-5, 50, 1000)).toBe(0);
+    expect(distanceAtTime(25, 50, 1000)).toBe(1000);
+    expect(distanceAtTime(5, 0, 1000)).toBe(0);
+  });
+});
+
 describe('buildSegments', () => {
-  it('attribue à chaque ligne le tronçon proportionnel à son intervalle de temps', () => {
-    const segs = buildSegments(lines, route, 20);
+  it('attribue à chaque ligne le tronçon parcouru pendant son intervalle de temps', () => {
+    const v = route.total / 20; // la chanson (20 s) couvre exactement le trajet
+    const segs = buildSegments(lines, route, v);
     expect(segs).toHaveLength(2);
     expect(segs[0].id).toBe(0);
     expect(segs[0].coords[0]).toEqual([0, 0]);
@@ -18,14 +28,12 @@ describe('buildSegments', () => {
     expect(segs[1].coords[0][0]).toBeCloseTo(1, 5);
     expect(segs[1].coords[segs[1].coords.length - 1][0]).toBeCloseTo(2, 5);
   });
-});
 
-describe('distanceAtTime', () => {
-  it('est proportionnelle et bornée', () => {
-    expect(distanceAtTime(10, 20, 1000)).toBe(500);
-    expect(distanceAtTime(-5, 20, 1000)).toBe(0);
-    expect(distanceAtTime(25, 20, 1000)).toBe(1000);
-    expect(distanceAtTime(5, 0, 1000)).toBe(0);
+  it('chanson plus courte que le trajet : les paroles occupent le tronçon initial', () => {
+    const v = route.total / 40; // en 20 s de chanson on ne parcourt que la moitié
+    const segs = buildSegments(lines, route, v);
+    expect(segs[0].coords[segs[0].coords.length - 1][0]).toBeCloseTo(0.5, 5);
+    expect(segs[1].coords[segs[1].coords.length - 1][0]).toBeCloseTo(1, 5);
   });
 });
 
