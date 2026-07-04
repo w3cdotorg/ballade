@@ -55,7 +55,7 @@ public FOSSGIS servers); pure geometric offset (no POIs, no link to the song).
   `out center` so ways/relations yield a point. Returns
   `{ name?, lngLat, category }[]`.
 - **`src/lyrics/keywords.ts`** (new) — `extractKeywords(lines)`: tokenize,
-  lowercase, strip accents, FR/EN stopwords, words ≥ 4 letters. Plus a small
+  lowercase, strip accents, FR/EN stopwords, words ≥ 3 letters. Plus a small
   FR/EN thematic lexicon mapping words (mer, rivière, jardin, fleur, château,
   café, danser…) to the four categories → `categoryHints`.
 - **`src/route/detour.ts`** (new, pure, testable) —

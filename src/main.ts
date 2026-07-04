@@ -117,6 +117,8 @@ function fitRoute(): void {
 
 async function applyDetour(): Promise<void> {
   if (!state.route || !state.duration || !state.start || !state.end) return;
+  // Si le trajet change pendant les requêtes (reset, nouvelle adresse), ce détour est périmé.
+  const routeAtStart = state.route;
   const profile = c.profile.value as Profile;
   const target = targetLength(state.duration, profile);
   c.detour.disabled = true;
@@ -131,6 +133,7 @@ async function applyDetour(): Promise<void> {
       status('No interesting detour found nearby.');
       return;
     }
+    if (state.route !== routeAtStart) return;
     const keywords = state.lyrics ? extractKeywords(state.lyrics) : new Set<string>();
     const { waypoints } = selectWaypoints(pois, {
       start: state.start,
@@ -148,6 +151,7 @@ async function applyDetour(): Promise<void> {
       [state.start, ...waypoints.map((w) => w.lngLat), state.end],
       profile,
     );
+    if (state.route !== routeAtStart) return;
     state.directRoute = state.route;
     state.route = buildRouteGeometry(coords);
     state.detourPois = waypoints;
@@ -184,6 +188,10 @@ c.detour.addEventListener('click', () => {
   if (state.detourPois) removeDetour();
   else void applyDetour();
 });
+
+// Le seuil de détour dépend de la vitesse du profil : le bouton doit se mettre à jour
+// si l'utilisateur change de mode de transport après avoir chargé trajet + audio.
+c.profile.addEventListener('change', updateDetourOffer);
 
 function tryBuildSegments(): void {
   if (!state.route || !state.lyrics || !state.duration) return;
