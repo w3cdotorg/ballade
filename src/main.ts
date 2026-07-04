@@ -5,6 +5,18 @@ import { createMap, followPoint } from './map/map';
 import { addLyricLayer, clearLyricLayer, updateLyricStates } from './map/lyricLayer';
 import { fetchRoute, geocode, type Profile } from './route/routing';
 import { buildRouteGeometry, pointAt, type LngLat, type RouteGeometry } from './route/geometry';
+import { fetchPois } from './route/overpass';
+import {
+  categoryHints,
+  corridorBbox,
+  detourMargin,
+  needsDetour,
+  selectWaypoints,
+  SPEED_MPS,
+  targetLength,
+  type Poi,
+} from './route/detour';
+import { extractKeywords } from './lyrics/keywords';
 import { parseLrc } from './lyrics/lrcParser';
 import { parseVtt } from './lyrics/vttParser';
 import { searchLyrics } from './lyrics/lrclib';
@@ -31,6 +43,10 @@ const state: {
   lyrics?: LyricLine[];
   duration?: number;
   words?: WordFeature[];
+  /** POI du détour appliqué, dans l'ordre du trajet. */
+  detourPois?: Poi[];
+  /** Trajet direct sauvegardé pour « Remove detour ». */
+  directRoute?: RouteGeometry;
 } = {};
 
 const startMarker = new maplibregl.Marker({ color: '#2563eb' });
@@ -61,6 +77,107 @@ const player = createPlayer((t) => {
   updateLyricStates(map, state.words, t);
 });
 
+const detourMarkers: maplibregl.Marker[] = [];
+
+function clearDetour(): void {
+  detourMarkers.forEach((m) => m.remove());
+  detourMarkers.length = 0;
+  state.detourPois = undefined;
+  state.directRoute = undefined;
+  c.detour.textContent = '✨ Add a detour';
+  c.detour.hidden = true;
+  c.detour.disabled = false;
+}
+
+// Le bouton n'apparaît que si la chanson dépasse nettement la durée estimée du trajet.
+function updateDetourOffer(): void {
+  if (state.detourPois) return; // détour appliqué : le bouton affiche déjà « Remove »
+  const profile = c.profile.value as Profile;
+  const offer =
+    state.route !== undefined &&
+    state.duration !== undefined &&
+    needsDetour(state.route.total, state.duration, profile);
+  const wasHidden = c.detour.hidden;
+  c.detour.hidden = !offer;
+  if (offer && wasHidden && state.route && state.duration) {
+    const extraMin = (state.duration - state.route.total / SPEED_MPS[profile]) / 60;
+    status(`The song outlasts the trip by ~${Math.max(1, Math.round(extraMin))} min — add a scenic detour?`);
+  }
+}
+
+function fitRoute(): void {
+  if (!state.route) return;
+  const { coords } = state.route;
+  const bounds = coords.reduce(
+    (b, p) => b.extend(p),
+    new maplibregl.LngLatBounds(coords[0], coords[0]),
+  );
+  map.fitBounds(bounds, { padding: 80 });
+}
+
+async function applyDetour(): Promise<void> {
+  if (!state.route || !state.duration || !state.start || !state.end) return;
+  const profile = c.profile.value as Profile;
+  const target = targetLength(state.duration, profile);
+  c.detour.disabled = true;
+  status('Searching for a scenic detour…');
+  try {
+    const bbox = corridorBbox(state.route.coords, detourMargin(target - state.route.total));
+    const pois = await fetchPois(bbox);
+    const keywords = state.lyrics ? extractKeywords(state.lyrics) : new Set<string>();
+    const { waypoints } = selectWaypoints(pois, {
+      start: state.start,
+      end: state.end,
+      directLength: state.route.total,
+      target,
+      keywords,
+      hints: categoryHints(keywords),
+    });
+    if (waypoints.length === 0) {
+      status('No interesting detour found nearby.');
+      return;
+    }
+    const coords = await fetchRoute(
+      [state.start, ...waypoints.map((w) => w.lngLat), state.end],
+      profile,
+    );
+    state.directRoute = state.route;
+    state.route = buildRouteGeometry(coords);
+    state.detourPois = waypoints;
+    for (const w of waypoints) {
+      detourMarkers.push(
+        new maplibregl.Marker({ color: '#f59e0b' }).setLngLat(w.lngLat).addTo(map),
+      );
+    }
+    fitRoute();
+    tryBuildSegments();
+    const names = waypoints.map((w) => w.name ?? 'a scenic spot').join(', ');
+    const addedKm = (state.route.total - state.directRoute.total) / 1000;
+    status(`Detour via ${names} (+${addedKm.toFixed(1)} km).`);
+    c.detour.textContent = '✕ Remove detour';
+    c.detour.hidden = false;
+  } catch (err) {
+    status(`Detour error: ${(err as Error).message}`);
+  } finally {
+    c.detour.disabled = false;
+  }
+}
+
+function removeDetour(): void {
+  if (!state.directRoute) return;
+  state.route = state.directRoute;
+  clearDetour();
+  fitRoute();
+  tryBuildSegments();
+  updateDetourOffer();
+  status(`Route: ${(state.route.total / 1000).toFixed(1)} km.`);
+}
+
+c.detour.addEventListener('click', () => {
+  if (state.detourPois) removeDetour();
+  else void applyDetour();
+});
+
 function tryBuildSegments(): void {
   if (!state.route || !state.lyrics || !state.duration) return;
   const offset = Number(c.lyricsOffset.value) || 0;
@@ -85,15 +202,13 @@ async function computeRoute(): Promise<void> {
   if (!state.start || !state.end) return;
   status('Calculating the route…');
   try {
+    clearDetour();
     const coords = await fetchRoute([state.start, state.end], c.profile.value as Profile);
     state.route = buildRouteGeometry(coords);
-    const bounds = coords.reduce(
-      (b, p) => b.extend(p),
-      new maplibregl.LngLatBounds(coords[0], coords[0]),
-    );
-    map.fitBounds(bounds, { padding: 80 });
+    fitRoute();
     status(`Route: ${(state.route.total / 1000).toFixed(1)} km.`);
     tryBuildSegments();
+    updateDetourOffer();
   } catch (err) {
     status(`Routing error: ${(err as Error).message}`);
   }
@@ -118,6 +233,7 @@ c.resetRoute.addEventListener('click', () => {
   // gated on currentTime === 0) instead of resuming mid-song from the old route.
   if (player.audio.src) player.audio.currentTime = 0;
   zoomFloorArmed = true;
+  clearDetour();
   state.start = state.end = state.route = state.words = undefined;
   startMarker.remove();
   endMarker.remove();
@@ -173,6 +289,7 @@ async function loadAudioFile(file: File): Promise<void> {
     status((err as Error).message);
     return;
   }
+  updateDetourOffer();
   const meta = await readTrackMeta(file);
   if (meta.artist) c.artist.value = meta.artist;
   if (meta.title) c.title.value = meta.title;

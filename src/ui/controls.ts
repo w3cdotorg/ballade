@@ -13,6 +13,7 @@ export interface Controls {
   fetchLyrics: HTMLButtonElement;
   lyricsFile: HTMLInputElement;
   lyricsOffset: HTMLInputElement;
+  detour: HTMLButtonElement;
   play: HTMLButtonElement;
   volume: HTMLInputElement;
   status: HTMLParagraphElement;
@@ -39,6 +40,7 @@ export function getControls(): Controls {
     fetchLyrics: byId('fetch-lyrics'),
     lyricsFile: byId('lyrics-file'),
     lyricsOffset: byId('lyrics-offset'),
+    detour: byId('detour'),
     play: byId('play'),
     volume: byId('volume'),
     status: byId('status'),

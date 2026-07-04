@@ -19,7 +19,7 @@
 
 ## Future phases
 
-- [ ] POI detours when song longer than route: suggest waypoints via Overpass API + OSRM
+- [x] POI detours when song longer than route: suggest waypoints via Overpass API + OSRM
 - [ ] Real GPS mode: `watchPosition` + route projection
 - [ ] Apple Music / MusicKit JS integration (note: public API does not expose lyrics)
 - [ ] Transit routing: GTFS support
