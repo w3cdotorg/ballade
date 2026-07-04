@@ -123,7 +123,14 @@ async function applyDetour(): Promise<void> {
   status('Searching for a scenic detour…');
   try {
     const bbox = corridorBbox(state.route.coords, detourMargin(target - state.route.total));
-    const pois = await fetchPois(bbox);
+    let pois: Poi[];
+    try {
+      pois = await fetchPois(bbox);
+    } catch {
+      // Overpass indisponible : traité comme "pas de détour trouvé", pas comme une erreur.
+      status('No interesting detour found nearby.');
+      return;
+    }
     const keywords = state.lyrics ? extractKeywords(state.lyrics) : new Set<string>();
     const { waypoints } = selectWaypoints(pois, {
       start: state.start,
