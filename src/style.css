@@ -82,8 +82,12 @@ html, body { height: 100%; margin: 0; font-family: system-ui, sans-serif; color:
   text-decoration: underline; width: auto; padding: 0; font-weight: 400;
 }
 
-/* Marqueurs custom : départ (bleu), arrivée (rose) — goutte CSS classique. */
-.marker-pin { width: 28px; height: 28px; position: relative; }
+/* Marqueurs custom : départ (bleu), arrivée (rose) — goutte CSS classique.
+   NE PAS déclarer `position` sur les éléments de marqueur : MapLibre les positionne
+   via .maplibregl-marker { position: absolute } — un override (même relative) sort
+   le marqueur du positionnement et le fait dériver au zoom. L'absolute hérité sert
+   aussi de contexte aux pseudo-éléments. */
+.marker-pin { width: 28px; height: 28px; }
 .marker-pin::before {
   content: ''; position: absolute; inset: 0;
   border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
@@ -98,7 +102,7 @@ html, body { height: 100%; margin: 0; font-family: system-ui, sans-serif; color:
 
 /* Le « joueur » : pastille encre à anneau blanc, pulse rose discret. */
 .journey-cursor {
-  position: relative; width: 18px; height: 18px; border-radius: 50%;
+  width: 18px; height: 18px; border-radius: 50%;
   background: var(--ink); border: 3px solid #fff;
   box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.25), 0 2px 6px rgba(17, 24, 39, 0.35);
 }
