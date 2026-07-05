@@ -138,8 +138,8 @@ export interface DetourSelection {
 const MAX_POIS = 3;
 const TARGET_MIN = 0.9;
 const TARGET_MAX = 1.1;
-// À score d'attrait égal, on préfère le candidat qui rapproche le plus de la cible.
-const FIT_BONUS_PER_KM = 5;
+// À score d'attrait égal, on préfère le candidat qui fait atterrir le plus près de la cible.
+const FIT_PENALTY_PER_KM = 5;
 
 // Projection locale équirectangulaire (m), suffisante à l'échelle d'un trajet.
 function localXY(p: LngLat, origin: LngLat): [number, number] {
@@ -182,7 +182,7 @@ export function selectWaypoints(pois: Poi[], ctx: SelectContext): DetourSelectio
       const len = estimate([...selected, poi].sort(byAxis));
       if (len > TARGET_MAX * target) continue;
       const score =
-        scorePoi(poi, keywords, hints) + ((len - curLen) / 1000) * FIT_BONUS_PER_KM;
+        scorePoi(poi, keywords, hints) - (Math.abs(target - len) / 1000) * FIT_PENALTY_PER_KM;
       if (!best || score > best.score) best = { poi, len, score };
     }
     if (!best) break;

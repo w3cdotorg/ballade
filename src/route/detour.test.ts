@@ -171,4 +171,13 @@ describe('selectWaypoints', () => {
     expect(sel.waypoints).toEqual([monument]);
     expect(sel.estimatedLength).toBeCloseTo(3624, -2);
   });
+
+  it('à attrait égal, préfère le candidat qui fait atterrir le plus près de la cible', () => {
+    // nearTarget : trajet ≈ 2 899 m ; overshoot : ≈ 3 249 m. Cible 3 000 (cap 3 300 : les
+    // deux passent). L'ancien bonus de rallonge brute choisissait le plus long.
+    const nearTarget = poi([0.01, 0.0084], 'monument');
+    const overshoot = poi([0.01, 0.0107], 'monument');
+    const sel = selectWaypoints([nearTarget, overshoot], ctx(3000));
+    expect(sel.waypoints).toEqual([nearTarget]);
+  });
 });
