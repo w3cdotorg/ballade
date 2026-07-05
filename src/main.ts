@@ -3,6 +3,7 @@ import './style.css';
 import maplibregl from 'maplibre-gl';
 import { createMap, followPoint } from './map/map';
 import { addLyricLayer, clearLyricLayer, updateLyricStates } from './map/lyricLayer';
+import { BasemapControl } from './map/basemapControl';
 import { fetchRoute, geocode, type Profile } from './route/routing';
 import { buildRouteGeometry, pointAt, type LngLat, type RouteGeometry } from './route/geometry';
 import { fetchPois } from './route/overpass';
@@ -132,6 +133,21 @@ map.on('zoomstart', (e) => {
   // originalEvent présent = geste utilisateur ; absent = notre propre animation easeTo.
   if (e.originalEvent) zoomFloorArmed = false;
 });
+
+// Sélecteur de fonds : setStyle() efface les couches custom, on re-pose les paroles
+// au chargement du nouveau style et on resynchronise leur état passé/courant/futur.
+map.addControl(
+  new BasemapControl((url) => {
+    map.setStyle(url);
+    map.once('style.load', () => {
+      if (state.words) {
+        addLyricLayer(map, state.words);
+        updateLyricStates(map, state.words, journeyT);
+      }
+    });
+  }),
+  'top-right',
+);
 
 function renderAt(t: number): void {
   if (!state.route || !state.words) return;
