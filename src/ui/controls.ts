@@ -17,6 +17,8 @@ export interface Controls {
   play: HTMLButtonElement;
   volume: HTMLInputElement;
   status: HTMLParagraphElement;
+  playlist: HTMLUListElement;
+  clearPlaylist: HTMLButtonElement;
 }
 
 export function getControls(): Controls {
@@ -44,5 +46,7 @@ export function getControls(): Controls {
     play: byId('play'),
     volume: byId('volume'),
     status: byId('status'),
+    playlist: byId('playlist'),
+    clearPlaylist: byId('clear-playlist'),
   };
 }

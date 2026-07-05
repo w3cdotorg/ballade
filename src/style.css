@@ -26,3 +26,20 @@ html, body { height: 100%; margin: 0; font-family: system-ui, sans-serif; }
   pointer-events: none; /* laisse le drop atteindre la fenêtre */
 }
 #drop-overlay[hidden] { display: none; }
+#playlist { list-style: none; margin: 6px 0; padding: 0; font-size: 13px; }
+#playlist li {
+  display: flex; align-items: center; gap: 6px; padding: 4px 6px;
+  border-radius: 6px; cursor: pointer;
+}
+#playlist li.selected { background: #fdf2f6; outline: 1px solid #e8336d; }
+#playlist li.locked { color: #9ca3af; }
+#playlist li .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#playlist li button {
+  width: auto; margin: 0; padding: 0 4px; font-size: 12px; line-height: 1.4;
+  background: none; border: 1px solid #d1d5db; border-radius: 4px;
+}
+#playlist li button:disabled { opacity: 0.3; }
+#clear-playlist {
+  background: none; border: none; color: #6b7280; font-size: 12px;
+  text-decoration: underline; width: auto; padding: 0;
+}

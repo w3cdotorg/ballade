@@ -24,11 +24,13 @@
       <section>
         <h2>2. Music</h2>
         <div id="dropzone" role="button" tabindex="0">
-          🎵 <strong>Drop an audio file</strong> anywhere on the page<br />
+          🎵 <strong>Drop audio files</strong> anywhere on the page<br />
           <span class="hint">works with lyrics files too (.lrc / .vtt / .srt) — or click to browse</span>
         </div>
         <p class="hint">Browse: <a href="#" id="browse-audio">audio file</a> · <a href="#" id="browse-lyrics">lyrics file</a></p>
-        <input type="file" id="audio-file" accept="audio/*" hidden />
+        <input type="file" id="audio-file" accept="audio/*" multiple hidden />
+        <ul id="playlist" hidden></ul>
+        <button id="clear-playlist" hidden>Clear playlist</button>
         <input type="file" id="lyrics-file" accept=".lrc,.vtt,.srt" hidden />
         <input id="artist" placeholder="Artist" />
         <input id="title" placeholder="Title" />

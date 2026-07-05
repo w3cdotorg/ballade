@@ -40,3 +40,21 @@ export function createPlayer(onTick: (t: number) => void): Player {
     pause: () => audio.pause(),
   };
 }
+
+/** Lit la durée (s) d'un fichier audio via un <audio> jetable, sans toucher au lecteur principal. */
+export function probeDuration(file: File): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const probe = new Audio();
+    probe.preload = 'metadata';
+    probe.onloadedmetadata = () => {
+      URL.revokeObjectURL(url);
+      resolve(probe.duration);
+    };
+    probe.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error(`Unreadable audio file: ${file.name}`));
+    };
+    probe.src = url;
+  });
+}
