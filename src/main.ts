@@ -118,9 +118,16 @@ function resyncSilentPhase(): void {
   if (phase === 'silent') startSilentPhase(journeyT);
 }
 
-const startMarker = new maplibregl.Marker({ color: '#2563eb' });
-const endMarker = new maplibregl.Marker({ color: '#e8336d' });
-const cursor = new maplibregl.Marker({ color: '#111827', scale: 0.8 });
+/** Élément DOM d'un marqueur custom (stylé par style.css). */
+function markerElement(className: string): HTMLDivElement {
+  const el = document.createElement('div');
+  el.className = className;
+  return el;
+}
+const startMarker = new maplibregl.Marker({ element: markerElement('marker-pin marker-start'), anchor: 'bottom' });
+const endMarker = new maplibregl.Marker({ element: markerElement('marker-pin marker-end'), anchor: 'bottom' });
+// Le « joueur » : pastille encre à anneau blanc, pulse discret (voir .journey-cursor).
+const cursor = new maplibregl.Marker({ element: markerElement('journey-cursor'), anchor: 'center' });
 
 // Plancher de zoom : tant qu'il est armé, la caméra suiveuse force TRAVEL_ZOOM à chaque
 // tick pour converger vers la vue niveau rue. Tout geste de zoom réel (molette/pincement/
