@@ -66,6 +66,7 @@ describe('fetchPois', () => {
     const pois = await fetchPois(bbox);
     expect(pois).toHaveLength(2);
     expect(pois[0].category).toBe('monument'); // historic prime sur park
+    expect(pois[1].category).toBe('cafe'); // le node/7 (autre type, même id) survit
   });
 
   it('jette une erreur claire sur statut HTTP non-2xx', async () => {

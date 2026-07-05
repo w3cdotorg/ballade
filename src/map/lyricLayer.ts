@@ -75,6 +75,9 @@ export function clearLyricLayer(map: maplibregl.Map): void {
 }
 
 export function updateLyricStates(map: maplibregl.Map, words: WordFeature[], t: number): void {
+  // Pendant une bascule de fond (setStyle), le style n'est pas encore chargé :
+  // setFeatureState jetterait et tuerait la boucle rAF (gel du voyage silencieux).
+  if (!map.getSource(SOURCE_ID)) return;
   for (const w of words) {
     map.setFeatureState({ source: SOURCE_ID, id: w.id }, { state: stateAtTime(w, t) });
   }

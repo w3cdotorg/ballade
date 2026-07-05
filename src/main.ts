@@ -141,20 +141,17 @@ map.on('zoomstart', (e) => {
   if (e.originalEvent) zoomFloorArmed = false;
 });
 
-// Sélecteur de fonds : setStyle() efface les couches custom, on re-pose les paroles
-// au chargement du nouveau style et on resynchronise leur état passé/courant/futur.
-map.addControl(
-  new BasemapControl((url) => {
-    map.setStyle(url);
-    map.once('style.load', () => {
-      if (state.words) {
-        addLyricLayer(map, state.words);
-        updateLyricStates(map, state.words, journeyT);
-      }
-    });
-  }),
-  'top-right',
-);
+// Sélecteur de fonds : setStyle() efface les couches custom. Handler PERSISTANT
+// (pas de `once` empilé à chaque bascule) : à chaque chargement de style, on re-pose
+// les paroles et on resynchronise leur état passé/courant/futur. Au premier
+// chargement de la carte, state.words est vide → no-op.
+map.on('style.load', () => {
+  if (state.words) {
+    addLyricLayer(map, state.words);
+    updateLyricStates(map, state.words, journeyT);
+  }
+});
+map.addControl(new BasemapControl((url) => map.setStyle(url)), 'top-right');
 
 function renderAt(t: number): void {
   if (!state.route || !state.words) return;
