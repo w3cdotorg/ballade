@@ -35,6 +35,17 @@ describe('buildSegments', () => {
     expect(segs[0].coords[segs[0].coords.length - 1][0]).toBeCloseTo(0.5, 5);
     expect(segs[1].coords[segs[1].coords.length - 1][0]).toBeCloseTo(1, 5);
   });
+
+  it('multi-pistes : lignes décalées par piste, tronçon sans mots entre elles', () => {
+    const longRoute = buildRouteGeometry([[0, 0], [4, 0]]);
+    const v = longRoute.total / 40; // le voyage complet dure 40 s
+    const piste1 = shiftLyrics([{ start: 0, end: 10, text: 'piste un' }], 0);
+    const piste2 = shiftLyrics([{ start: 0, end: 10, text: 'piste deux' }], 30);
+    const segs = buildSegments([...piste1, ...piste2], longRoute, v);
+    expect(segs).toHaveLength(2);
+    expect(segs[0].coords[segs[0].coords.length - 1][0]).toBeCloseTo(1, 5); // fin à 1/4
+    expect(segs[1].coords[0][0]).toBeCloseTo(3, 5); // reprise à 3/4 : trou sans mots entre les deux
+  });
 });
 
 describe('stateAtTime', () => {
