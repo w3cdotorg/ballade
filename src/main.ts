@@ -244,9 +244,10 @@ async function playTrack(track: Track): Promise<void> {
     } catch (err) {
       if (epoch !== journeyEpoch) return;
       // Piste illisible en plein voyage : on saute sa fenêtre au lieu de bloquer le
-      // voyage en pause (Resume ré-échouerait et la piste fautive est verrouillée).
-      status(`${(err as Error).message} — skipping “${trackLabel(track)}”.`);
+      // voyage. Statut posté APRÈS la reprise : si elle débouche sur le silence ou
+      // l'arrivée, leur message ne doit pas masquer l'explication du skip.
       continueJourneyAt(track.start + track.duration);
+      status(`${(err as Error).message} — skipped “${trackLabel(track)}”.`);
       return;
     }
     loadedTrackId = track.id; // l'audio EST chargé, même si le voyage a changé entre-temps
@@ -285,6 +286,7 @@ function continueJourneyAt(t: number): void {
 
 function startJourney(): void {
   journeyEpoch++;
+  phase = 'idle'; // quitte 'arrived' AVANT rebuildSegments : curseur au départ, pas de flash à destination
   playlist.repackFromZero();
   journeyT = 0;
   loadedTrackId = undefined;
@@ -531,7 +533,8 @@ function updateOffers(): void {
   const music = playlist.totalMusic();
   let offer = '';
   if (state.route && music > 0) {
-    if (!state.detourPois && !c.detour.hidden) {
+    const speed = averageSpeed(state.route, c.profile.value as Profile);
+    if (!state.detourPois && needsDetour(state.route.total, music, speed)) {
       const extra = music - travelSeconds();
       offer = `The music outlasts the trip by ~${formatDuration(Math.max(60, extra))} — add a scenic detour?`;
     } else if (music < travelSeconds() * 0.8) {
@@ -650,6 +653,12 @@ async function computeRoute(): Promise<void> {
     const { coords, duration } = await fetchRoute([state.start, state.end], c.profile.value as Profile);
     state.route = buildRouteGeometry(coords, duration);
     fitRoute();
+    if (phase === 'arrived') {
+      // Nouvelle route après une arrivée : ce n'est pas un replay — on repart à zéro,
+      // et rebuildSegments ne doit plus poser le curseur à destination.
+      phase = 'idle';
+      c.play.textContent = '▶ Start the journey';
+    }
     status(`Route: ${(state.route.total / 1000).toFixed(1)} km · ~${formatDuration(travelSeconds())}.`);
     rebuildSegments();
     updatePlayEnabled();
