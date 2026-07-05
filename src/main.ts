@@ -245,7 +245,7 @@ async function playTrack(track: Track): Promise<void> {
       if (epoch !== journeyEpoch) return;
       // Piste illisible en plein voyage : on saute sa fenêtre au lieu de bloquer le
       // voyage en pause (Resume ré-échouerait et la piste fautive est verrouillée).
-      status(`${(err as Error).message} — skipping "${trackLabel(track)}".`);
+      status(`${(err as Error).message} — skipping “${trackLabel(track)}”.`);
       continueJourneyAt(track.start + track.duration);
       return;
     }
