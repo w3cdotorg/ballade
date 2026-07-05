@@ -689,15 +689,25 @@ async function computeRoute(): Promise<void> {
   }
 }
 
+/** Coordonnées lisibles « lat, lng » (ordre humain, inverse du LngLat GeoJSON). */
+function fmtLngLat(p: LngLat): string {
+  return `${p[1].toFixed(5)}, ${p[0].toFixed(5)}`;
+}
+
+// Le clic remplit aussi le champ correspondant : l'interface reflète le geste, et le
+// flux mixte est gratuit — une adresse tapée occupe son créneau (state.start/end),
+// le clic suivant ne remplit que l'autre champ.
 map.on('click', (e) => {
   const lngLat: LngLat = [e.lngLat.lng, e.lngLat.lat];
   if (!state.start) {
     state.start = lngLat;
     startMarker.setLngLat(lngLat).addTo(map);
+    c.searchStart.value = fmtLngLat(lngLat);
     status('Start set. Click the destination.');
   } else if (!state.end) {
     state.end = lngLat;
     endMarker.setLngLat(lngLat).addTo(map);
+    c.searchEnd.value = fmtLngLat(lngLat);
     void computeRoute();
   }
 });
@@ -724,6 +734,9 @@ c.resetRoute.addEventListener('click', () => {
   updateOffers();
   c.play.disabled = true;
   c.play.textContent = '▶ Start the journey';
+  // Les champs suivent l'état : après reset il n'y a plus ni marqueurs ni route.
+  c.searchStart.value = '';
+  c.searchEnd.value = '';
   status('Click the map: start, then destination.');
 });
 
