@@ -241,6 +241,10 @@ async function playTrack(track: Track): Promise<void> {
     }
     loadedTrackId = track.id;
   }
+  // Rattrape l'écart entre le temps de voyage et le début de la fenêtre : quelques
+  // frames de silence ont pu s'écouler entre l'ajout de la piste et son démarrage.
+  const into = Math.max(0, journeyT - track.start);
+  if (Math.abs(player.audio.currentTime - into) > 0.25) player.audio.currentTime = into;
   try {
     await player.play();
     phase = 'playing';
@@ -335,6 +339,13 @@ async function addAudioFile(file: File): Promise<void> {
   const track = playlist.add(file, duration, journeyT);
   syncSelectedFields();
   afterPlaylistChange();
+  // Ajout pendant le silence : la musique reprend immédiatement, AVANT les awaits
+  // réseau (tags, lrclib) — l'horloge silencieuse avancerait pendant ce temps et la
+  // reprise raterait le début de la fenêtre. Les paroles arriveront en cours de lecture.
+  if (phase === 'silent' && playlist.trackAt(journeyT)) {
+    stopSilentJourney();
+    continueJourneyAt(journeyT);
+  }
   const meta = await readTrackMeta(file);
   playlist.update(track.id, { artist: meta.artist, title: meta.title });
   syncSelectedFields();
@@ -345,11 +356,6 @@ async function addAudioFile(file: File): Promise<void> {
     playlist.update(track.id, { lyricsStatus: 'notfound' });
     refreshPlaylistView();
     status(`${file.name} added (${Math.round(duration)} s) — fill in artist + title or drop a .lrc for its lyrics.`);
-  }
-  // Ajout pendant le silence : la musique reprend immédiatement là où on est.
-  if (phase === 'silent' && playlist.trackAt(journeyT)) {
-    stopSilentJourney();
-    continueJourneyAt(journeyT);
   }
 }
 
