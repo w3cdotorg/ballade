@@ -19,14 +19,25 @@ you, greyed out, everything the city has already sung.
 
 ## Usage
 
-1. **Route** — click a start and a destination on the map (or search an address),
-   pick a mode (walking / cycling / driving).
-2. **Music** — load an audio file. Synced lyrics are fetched automatically from
-   [lrclib.net](https://lrclib.net) using the file's tags; otherwise provide a
-   `.lrc` (music) or `.srt`/`.vtt` (podcast transcript).
-3. **Play** — the journey begins: the camera follows your simulated position, each
-   word is drawn along the path, the current line lights up, and lyrics already sung
-   stay greyed out behind you. You reach your destination on the last note.
+1. **Route** — click the map for the start and the destination (the fields fill in
+   automatically) or search addresses, pick a mode (walking / cycling / driving),
+   and choose a basemap (Liberty / Bright / Positron) from the map control.
+2. **Music** — drop one or more audio files: they queue up as a playlist you can
+   reorder. Synced lyrics are fetched per track from [lrclib.net](https://lrclib.net)
+   using each file's tags; otherwise select a track and provide a `.lrc` (music) or
+   `.srt`/`.vtt` (podcast transcript).
+3. **Play** — the journey begins at a realistic, constant pace (derived from the
+   router's estimated travel time): the camera follows your simulated position, each
+   word is drawn along the stretch covered while its song plays, the current line
+   lights up, and lyrics already sung stay greyed out behind you.
+
+The journey and the music negotiate the difference:
+
+- **Trip longer than the playlist?** The journey continues in silence — drop more
+  songs at any moment and the music resumes right where you are.
+- **Music longer than the trip?** Ballade offers a scenic detour via POIs picked
+  from your lyrics (Overpass + OSRM); otherwise the current song finishes at the
+  destination.
 
 ## Demo without an MP3
 
@@ -36,7 +47,7 @@ Then load `samples/demo.wav` + `samples/chanson-automne.lrc` (Verlaine, public d
 
 ## Tests
 
-    npm test         # Vitest (parsers, geometry, timeline, mocked HTTP clients)
+    npm test         # Vitest (parsers, geometry, timeline, playlist, mocked HTTP clients)
     npm run typecheck
 
 Design docs (in French): `docs/superpowers/specs/`.
