@@ -84,8 +84,11 @@ l'horloge, libellé du bouton play, statut « Arrivé ! ».
 ## Erreurs & bords
 
 - Durée OSRM absente ou ≤ 0 → `v = SPEED_MPS[profile]` (fallback).
-- Reset ou nouvelle route pendant la phase silencieuse → `stop()` de
-  l'horloge, mêmes gardes de péremption que `applyDetour`.
+- Reset pendant la phase silencieuse → arrêt de l'horloge (`cancel()`), temps de
+  voyage remis à zéro.
+- Nouvelle route ou changement de profil pendant la phase silencieuse → la
+  phase est recalée (`resyncSilentPhase`) : elle repart du temps courant avec
+  la nouvelle vitesse/durée.
 - Changement de profil → nouvelle requête OSRM (déjà le cas), nouvelle durée.
 - Seek audio pendant la phase silencieuse : impossible (l'audio est terminé) ;
   rejouer (`play` après `ended`) remet `T = 0`, comportement actuel conservé.

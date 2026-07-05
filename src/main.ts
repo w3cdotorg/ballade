@@ -68,6 +68,8 @@ function stopSilentJourney(): void {
 }
 
 function arrive(): void {
+  // Voyage terminé : la prochaine route repart de zéro (curseur au départ, replay depuis le début).
+  journeyT = 0;
   c.play.textContent = '▶ Replay the journey';
   status('Arrived!');
 }
@@ -137,6 +139,7 @@ function clearDetour(): void {
   c.detour.disabled = false;
 }
 
+// Le bouton n'apparaît que si la chanson dépasse nettement la durée estimée du trajet.
 function updateDetourOffer(): void {
   if (state.detourPois) return; // détour appliqué : le bouton affiche déjà « Remove »
   if (!state.route || state.duration === undefined) {
@@ -149,7 +152,7 @@ function updateDetourOffer(): void {
   c.detour.hidden = !offer;
   if (offer && wasHidden) {
     const extra = state.duration - travelSeconds();
-    status(`The song outlasts the trip by ~${formatDuration(extra)} — add a scenic detour?`);
+    status(`The song outlasts the trip by ~${formatDuration(Math.max(60, extra))} — add a scenic detour?`);
   }
 }
 
@@ -491,7 +494,7 @@ c.volume.addEventListener('input', () => {
 c.lyricsOffset.addEventListener('input', () => {
   if (!state.lyrics) return;
   tryBuildSegments();
-  if (state.words) updateLyricStates(map, state.words, player.audio.currentTime);
+  if (state.words) updateLyricStates(map, state.words, journeyT);
 });
 
 c.play.addEventListener('click', async () => {
@@ -502,7 +505,7 @@ c.play.addEventListener('click', async () => {
     return;
   }
   // Phase silencieuse en pause : reprise (la musique, elle, est finie).
-  if (player.audio.ended && journeyT < travelSeconds()) {
+  if (player.audio.ended && journeyT > 0 && journeyT < travelSeconds()) {
     startSilentPhase(journeyT);
     return;
   }

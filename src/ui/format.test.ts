@@ -20,4 +20,11 @@ describe('formatDuration', () => {
     expect(formatDuration(2 * 86400 + 4 * 3600)).toBe('2 d 4 h');
     expect(formatDuration(3 * 86400)).toBe('3 d');
   });
+
+  it('transitions d\'unités exactes', () => {
+    expect(formatDuration(3540)).toBe('59 min');
+    expect(formatDuration(3599)).toBe('59 min');
+    expect(formatDuration(86340)).toBe('23 h 59');
+    expect(formatDuration(86400)).toBe('1 d');
+  });
 });
