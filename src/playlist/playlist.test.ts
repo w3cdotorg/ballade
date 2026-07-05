@@ -137,3 +137,22 @@ describe('sélection / update', () => {
     expect(p.tracks()[0].start).toBe(0);
   });
 });
+
+describe('robustesse', () => {
+  it('opérations sur un id inexistant : no-op ou false', () => {
+    const p = createPlaylist();
+    const a = p.add(file('a.mp3'), 100, 0);
+    expect(p.remove(999, 0)).toBe(false);
+    expect(p.moveUp(999, 0)).toBe(false);
+    expect(p.moveDown(999, 0)).toBe(false);
+    p.update(999, { artist: 'X' }); // ne jette pas
+    p.select(999); // sélection inchangée
+    expect(p.selected()?.id).toBe(a.id);
+    expect(p.isLocked(999, 50)).toBe(false);
+  });
+
+  it('première piste ajoutée en plein silence (liste vide, nowT > 0) : démarre à nowT', () => {
+    const p = createPlaylist();
+    expect(p.add(file('a.mp3'), 100, 42).start).toBe(42);
+  });
+});

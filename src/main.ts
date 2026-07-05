@@ -65,6 +65,9 @@ let journeyT = 0;
 let currentTrackStart = 0;
 /** Piste actuellement chargée dans le player, pour éviter un rechargement inutile. */
 let loadedTrackId: number | undefined;
+/** Génération du voyage : incrémentée par pause/reset/arrivée/départ pour invalider
+ *  les playTrack en vol (un await de chargement ne doit pas écraser une action utilisateur). */
+let journeyEpoch = 0;
 
 /** Durée estimée (s) du trajet courant à vitesse réaliste. */
 function travelSeconds(): number {
@@ -82,6 +85,7 @@ function stopSilentJourney(): void {
 }
 
 function arrive(): void {
+  journeyEpoch++;
   // Voyage terminé : la prochaine route repart de zéro (curseur au départ, replay depuis le début).
   phase = 'arrived';
   journeyT = 0;
@@ -229,17 +233,20 @@ function rebuildSegments(): void {
 // ---------------------------------------------------------------------------
 
 async function playTrack(track: Track): Promise<void> {
+  const epoch = journeyEpoch;
   currentTrackStart = track.start;
   if (loadedTrackId !== track.id) {
     try {
       await player.load(track.file);
     } catch (err) {
+      if (epoch !== journeyEpoch) return;
       status((err as Error).message);
       phase = 'paused';
       c.play.textContent = '▶ Resume';
       return;
     }
-    loadedTrackId = track.id;
+    loadedTrackId = track.id; // l'audio EST chargé, même si le voyage a changé entre-temps
+    if (epoch !== journeyEpoch) return;
   }
   // Rattrape l'écart entre le temps de voyage et le début de la fenêtre : quelques
   // frames de silence ont pu s'écouler entre l'ajout de la piste et son démarrage.
@@ -247,9 +254,14 @@ async function playTrack(track: Track): Promise<void> {
   if (Math.abs(player.audio.currentTime - into) > 0.25) player.audio.currentTime = into;
   try {
     await player.play();
+    if (epoch !== journeyEpoch) {
+      player.pause(); // une pause/reset a eu lieu pendant le play() : ne pas le défaire
+      return;
+    }
     phase = 'playing';
     c.play.textContent = '⏸ Pause';
   } catch (err) {
+    if (epoch !== journeyEpoch) return; // rejet provoqué par le reset lui-même (abort)
     phase = 'paused';
     c.play.textContent = '▶ Resume';
     status(`Playback failed: ${(err as Error).message}`);
@@ -268,6 +280,7 @@ function continueJourneyAt(t: number): void {
 }
 
 function startJourney(): void {
+  journeyEpoch++;
   playlist.repackFromZero();
   journeyT = 0;
   loadedTrackId = undefined;
@@ -293,6 +306,7 @@ player.audio.addEventListener('ended', () => {
 c.play.addEventListener('click', () => {
   switch (phase) {
     case 'playing':
+      journeyEpoch++;
       player.pause();
       phase = 'paused';
       c.play.textContent = '▶ Resume';
@@ -307,6 +321,7 @@ c.play.addEventListener('click', () => {
       );
       break;
     case 'silent':
+      journeyEpoch++;
       stopSilentJourney();
       phase = 'silentPaused';
       c.play.textContent = '▶ Resume';
@@ -637,6 +652,7 @@ map.on('click', (e) => {
 });
 
 c.resetRoute.addEventListener('click', () => {
+  journeyEpoch++;
   player.pause();
   stopSilentJourney();
   phase = 'idle';
