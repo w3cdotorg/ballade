@@ -43,3 +43,4 @@ html, body { height: 100%; margin: 0; font-family: system-ui, sans-serif; }
   background: none; border: none; color: #6b7280; font-size: 12px;
   text-decoration: underline; width: auto; padding: 0;
 }
+#offer { color: #b45309; } /* ambre : distingue l'offre persistante du statut courant */

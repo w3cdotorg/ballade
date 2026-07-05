@@ -121,15 +121,15 @@ const startMarker = new maplibregl.Marker({ color: '#2563eb' });
 const endMarker = new maplibregl.Marker({ color: '#e8336d' });
 const cursor = new maplibregl.Marker({ color: '#111827', scale: 0.8 });
 
-// Zoom floor: while armed, the follow camera forces TRAVEL_ZOOM on every tick so the
-// player converges into the street-level view. Any real user zoom gesture (wheel/pinch/
-// dblclick) disarms it so manual zoom-out sticks; re-armed on journey start / reset.
+// Plancher de zoom : tant qu'il est armé, la caméra suiveuse force TRAVEL_ZOOM à chaque
+// tick pour converger vers la vue niveau rue. Tout geste de zoom réel (molette/pincement/
+// double-clic) le désarme pour respecter le dézoom manuel ; réarmé au départ du voyage / reset.
 let zoomFloorArmed = true;
 map.on('wheel', () => {
   zoomFloorArmed = false;
 });
 map.on('zoomstart', (e) => {
-  // originalEvent present = user gesture; absent = our own easeTo animation.
+  // originalEvent présent = geste utilisateur ; absent = notre propre animation easeTo.
   if (e.originalEvent) zoomFloorArmed = false;
 });
 
@@ -220,11 +220,14 @@ function rebuildSegments(): void {
   const add = () => {
     if (state.words) addLyricLayer(map, state.words);
   };
-  // 'idle' (not 'load') as fallback: isStyleLoaded() can return a transient false after
-  // the map has already loaded, in which case 'load' would never fire again.
+  // 'idle' (et non 'load') en secours : isStyleLoaded() peut renvoyer un faux négatif
+  // transitoire après le chargement de la carte, auquel cas 'load' ne se redéclencherait jamais.
   if (map.isStyleLoaded()) add();
   else map.once('idle', add);
-  const d = distanceAtTime(journeyT, speed, state.route.total);
+  // Après l'arrivée, le curseur reste à destination : journeyT a été remis à zéro
+  // pour le prochain départ, mais visuellement le voyage est fini.
+  const d =
+    phase === 'arrived' ? state.route.total : distanceAtTime(journeyT, speed, state.route.total);
   cursor.setLngLat(pointAt(state.route, d)).addTo(map);
 }
 
@@ -240,9 +243,10 @@ async function playTrack(track: Track): Promise<void> {
       await player.load(track.file);
     } catch (err) {
       if (epoch !== journeyEpoch) return;
-      status((err as Error).message);
-      phase = 'paused';
-      c.play.textContent = '▶ Resume';
+      // Piste illisible en plein voyage : on saute sa fenêtre au lieu de bloquer le
+      // voyage en pause (Resume ré-échouerait et la piste fautive est verrouillée).
+      status(`${(err as Error).message} — skipping "${trackLabel(track)}".`);
+      continueJourneyAt(track.start + track.duration);
       return;
     }
     loadedTrackId = track.id; // l'audio EST chargé, même si le voyage a changé entre-temps
@@ -342,14 +346,14 @@ c.play.addEventListener('click', () => {
 // Ajout de pistes : durée, méta, recherche lrclib par piste
 // ---------------------------------------------------------------------------
 
-async function addAudioFile(file: File): Promise<void> {
+async function addAudioFile(file: File): Promise<'added' | 'skipped'> {
   status(`Loading ${file.name}…`);
   let duration: number;
   try {
     duration = await probeDuration(file);
   } catch (err) {
     status((err as Error).message);
-    return;
+    return 'skipped';
   }
   const track = playlist.add(file, duration, journeyT);
   syncSelectedFields();
@@ -372,6 +376,15 @@ async function addAudioFile(file: File): Promise<void> {
     refreshPlaylistView();
     status(`${file.name} added (${Math.round(duration)} s) — fill in artist + title or drop a .lrc for its lyrics.`);
   }
+  return 'added';
+}
+
+/** Statut récapitulatif d'un ajout multiple ; un fichier audio seul garde ses statuts détaillés. */
+function summarizeBatch(added: number, skipped: string[]): void {
+  if (added + skipped.length < 2) return;
+  const skippedPart =
+    skipped.length > 0 ? ` · ${skipped.length} skipped: ${skipped.join(', ')}` : '';
+  status(`${added} track${added === 1 ? '' : 's'} added${skippedPart}`);
 }
 
 async function fetchTrackLyrics(id: number): Promise<void> {
@@ -445,7 +458,13 @@ async function loadLyricsFile(file: File): Promise<void> {
 c.audioFile.addEventListener('change', () => {
   const files = [...(c.audioFile.files ?? [])];
   void (async () => {
-    for (const file of files) await addAudioFile(file);
+    let added = 0;
+    const skipped: string[] = [];
+    for (const file of files) {
+      if ((await addAudioFile(file)) === 'added') added++;
+      else skipped.push(file.name);
+    }
+    summarizeBatch(added, skipped);
   })();
 });
 
@@ -502,23 +521,25 @@ function updateDetourOffer(): void {
     return;
   }
   const speed = averageSpeed(state.route, c.profile.value as Profile);
-  const offer = needsDetour(state.route.total, music, speed);
-  const wasHidden = c.detour.hidden;
-  c.detour.hidden = !offer;
-  if (offer && wasHidden) {
-    const extra = music - travelSeconds();
-    status(`The music outlasts the trip by ~${formatDuration(Math.max(60, extra))} — add a scenic detour?`);
-  }
+  c.detour.hidden = !needsDetour(state.route.total, music, speed);
 }
 
+/** Unique propriétaire de la ligne d'offre persistante : détour prioritaire, sinon
+ *  couverture insuffisante ; vidée dès que rien ne s'applique. */
 function updateOffers(): void {
   updateDetourOffer();
   const music = playlist.totalMusic();
-  if (state.route && music > 0 && music < travelSeconds() * 0.8) {
-    status(
-      `Your playlist covers ${formatDuration(music)} of a ~${formatDuration(travelSeconds())} trip — drop more songs anytime.`,
-    );
+  let offer = '';
+  if (state.route && music > 0) {
+    if (!state.detourPois && !c.detour.hidden) {
+      const extra = music - travelSeconds();
+      offer = `The music outlasts the trip by ~${formatDuration(Math.max(60, extra))} — add a scenic detour?`;
+    } else if (music < travelSeconds() * 0.8) {
+      offer = `Your playlist covers ${formatDuration(music)} of a ~${formatDuration(travelSeconds())} trip — drop more songs anytime.`;
+    }
   }
+  c.offer.textContent = offer;
+  c.offer.hidden = offer === '';
 }
 
 function fitRoute(): void {
@@ -585,6 +606,7 @@ async function applyDetour(): Promise<void> {
     status(`Detour via ${names} (+${addedKm.toFixed(1)} km).`);
     c.detour.textContent = '✕ Remove detour';
     c.detour.hidden = false;
+    updateOffers();
     resyncSilentPhase();
   } catch (err) {
     status(`Detour error: ${(err as Error).message}`);
@@ -670,6 +692,7 @@ c.resetRoute.addEventListener('click', () => {
   cursor.remove();
   clearLyricLayer(map);
   refreshPlaylistView();
+  updateOffers();
   c.play.disabled = true;
   c.play.textContent = '▶ Start the journey';
   status('Click the map: start, then destination.');
@@ -739,18 +762,23 @@ window.addEventListener('drop', (e) => {
   const files = [...(e.dataTransfer?.files ?? [])];
   if (files.length === 0) return;
   void (async () => {
+    let added = 0;
+    const skipped: string[] = [];
     for (const file of files) {
       switch (classifyFile(file.name, file.type)) {
         case 'lyrics':
           await loadLyricsFile(file);
           break;
         case 'audio':
-          await addAudioFile(file);
+          if ((await addAudioFile(file)) === 'added') added++;
+          else skipped.push(file.name);
           break;
         default:
           status(`Unsupported file: ${file.name}`);
+          skipped.push(file.name);
       }
     }
+    summarizeBatch(added, skipped);
   })();
 });
 
